@@ -272,6 +272,10 @@ def show_inventory(player):
                     parts.append(f"BLOCK:{card.block}")
                 if card.lifesteal:
                     parts.append(f"LIFESTEAL:{card.lifesteal}")
+                if card.draw:
+                    parts.append(f"DRAW:{card.draw}")
+                if card.discard:
+                    parts.append(f"DRAW:{card.discard}")
                 if card.effect:
                     chance = getattr(card, "effect_chance", 1.0)
                     parts.append(
@@ -334,6 +338,10 @@ def show_inventory(player):
                                 parts.append(f"BLOCK:{card.block}")
                             if card.lifesteal:
                                 parts.append(f"LIFESTEAL:{card.lifesteal}")
+                            if card.draw:
+                                parts.append(f"DRAW:{card.draw}")
+                            if card.discard:
+                                parts.append(f"DRAW:{card.discard}")
                             if card.effect:
                                 chance = getattr(card, "effect_chance", 1.0)
                                 parts.append(
@@ -729,6 +737,7 @@ def combat(player, enemies):
     while player.hp > 0 and any(e.hp > 0 for e in enemies):
         clear_screen()
         print("\n--- Nové kolo ---")
+        player.block = 0
         print(f"- {player.name} (HP: {player.hp}, Block: {player.block})")
         print("\nNepřátelé:")
         for e in enemies:
@@ -764,7 +773,8 @@ def combat(player, enemies):
         print(" ")
 
         # ===== ENEMY =====
-
+        for enemy in enemies:
+            enemy.block = 0
         for enemy in enemies:
             if enemy.hp <= 0:
                 continue
@@ -789,10 +799,12 @@ def combat(player, enemies):
 
 # ===== MAIN LOOP ========
 player = Character("Hráč", 20)
-player.equipment = [gear.mace, gear.shield_with_spike, gear.leather_armor]
+player.equipment = [gear.mace, gear.shield_with_spike,
+                    gear.leather_armor, gear.abakus]
 player.equip_item(gear.mace)
 player.equip_item(gear.shield)
 player.equip_item(gear.leather_armor)
+player.equip_item(gear.abakus)
 
 
 game_map = GameMap(20, 20)

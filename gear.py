@@ -54,7 +54,10 @@ wings = Equipment("Hmyzí křídla", "body", [
 ])
 
 # ===== pomocné karty =====
-
+abakus = Equipment("Abakus", "belt", [
+    Card("Příprava", draw=2, target_type="self"),
+    Card("Příprava", draw=1, discard=1, target_type="self", cost=0)
+])
 # ===== artefakty =====
 amulet_of_defense = Equipment("Talisman ochrany", "neck", [
     Card("Bariera", block=4, target_type="self")

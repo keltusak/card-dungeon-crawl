@@ -2,7 +2,8 @@ import random
 
 
 class Card:
-    def __init__(self, name, damage=0, block=0, effect=None, effect_chance=1.0, effect_on_damage=False, lifesteal=0, target_type="enemy", cost=1):
+    def __init__(self, name, damage=0, block=0, effect=None, effect_chance=1.0,
+                 effect_on_damage=False, lifesteal=0, target_type="enemy", draw=0, discard=0, cost=1):
         self.name = name
         self.damage = damage
         self.block = block
@@ -11,6 +12,8 @@ class Card:
         self.effect_on_damage = effect_on_damage
         self.lifesteal = lifesteal
         self.target_type = target_type
+        self.draw = draw
+        self.discard = discard
         self.cost = cost
 
     def play(self, user, target):
@@ -29,6 +32,29 @@ class Card:
             user.hp = min(user.max_hp, user.hp + heal_amount)
             print(
                 f"{user.name} se léčí o {heal_amount} HP díky lifestealu (HP: {user.hp})")
+
+        if self.draw > 0:
+            print(f"{user.name} dobral {self.draw} kartu/karty díky {self.name}")
+            user.draw(self.draw)
+
+        if self.discard > 0:
+            for _ in range(self.discard):
+                if not user.hand:
+                    break
+                print("\nAktuální ruka:")
+                for i, card in enumerate(user.hand):
+                    print(f"{i}: {card.name}")
+                while True:
+                    choice = input(
+                        f"Vyber kartu k zahazení (0-{len(user.hand)-1}): ")
+                    if choice.isdigit():
+                        idx = int(choice)
+                        if 0 <= idx < len(user.hand):
+                            discarded = user.hand.pop(idx)
+                            user.discard.append(discarded)
+                            print(f"Zahodil jsi kartu: {discarded.name}")
+                            break
+                    print("Neplatná volba, zkus to znovu.")
 
         if self.effect:
             if getattr(self, "effect_on_damage", False) and dmg_done <= 0:
