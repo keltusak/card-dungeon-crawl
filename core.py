@@ -3,7 +3,7 @@ import random
 
 class Card:
     def __init__(self, name, damage=0, block=0, effect=None, effect_chance=1.0,
-                 effect_on_damage=False, lifesteal=0, target_type="enemy", draw=0, discard=0, cost=1):
+                 effect_on_damage=False, lifesteal=0, target_type="enemy", spawn_enemy=None, spawn_count=0, draw=0, discard=0, cost=1):
         self.name = name
         self.damage = damage
         self.block = block
@@ -14,15 +14,24 @@ class Card:
         self.target_type = target_type
         self.draw = draw
         self.discard = discard
+        self.spawn_enemy = spawn_enemy
+        self.spawn_count = spawn_count
         self.cost = cost
 
-    def play(self, user, target):
+    def play(self, user, target, enemies_list=None, create_enemy_func=None):
         print(f"{user.name} používá {self.name}")
 
         dmg_done = 0
-        total_damage = self.damage + getattr(user, "strength", 0)
-        if total_damage:
+        if getattr(self, "damage", 0) > 0:
+            total_damage = self.damage + getattr(user, "strength", 0)
             dmg_done = target.take_damage(total_damage)
+
+        if self.spawn_enemy and enemies_list is not None and create_enemy_func is not None:
+            for _ in range(self.spawn_count):
+                new_enemy = create_enemy_func(self.spawn_enemy)
+                enemies_list.append(new_enemy)
+            print(
+                f"{user.name} vyvolal nepřítele: {self.spawn_count} x {new_enemy.name}!")
 
         if self.block:
             user.add_block(self.block)
@@ -41,9 +50,10 @@ class Card:
             for _ in range(self.discard):
                 if not user.hand:
                     break
+
                 print("\nAktuální ruka:")
-                for i, card in enumerate(user.hand):
-                    print(f"{i}: {card.name}")
+                print_cards(user.hand)  # <-- tady nahradíme výpis názvů
+
                 while True:
                     choice = input(
                         f"Vyber kartu k zahazení (0-{len(user.hand)-1}): ")
@@ -132,7 +142,38 @@ class Dodge(Status_Effect):
 
 
 class Equipment:
-    def __init__(self, name, slot_type, cards):
+    def __init__(self, name, slot_type, cards, two_handed=False):
         self.name = name
         self.slot_type = slot_type
+        self.two_handed = two_handed
         self.cards = cards
+
+
+def print_cards(cards):
+    if not cards:
+        print("Žádné karty.")
+        return
+
+    for i, card in enumerate(cards):
+        parts = []
+
+        if card.damage:
+            parts.append(f"DMG:{card.damage}")
+        if card.block:
+            parts.append(f"BLOCK:{card.block}")
+        if card.lifesteal:
+            parts.append(f"LIFESTEAL:{card.lifesteal}")
+        if card.effect:
+            chance = getattr(card, "effect_chance", 1.0)
+            parts.append(f"EFFECT:{card.effect.name} ({int(chance*100)}%)")
+        if getattr(card, "draw", 0):
+            parts.append(f"DRAW:{card.draw}")
+        if getattr(card, "discard", 0):
+            parts.append(f"DISCARD:{card.discard}")
+        if card.cost:
+            parts.append(f"COST:{card.cost}")
+        if getattr(card, "target_type", None) == "all_enemies":
+            parts.append("AOE")
+
+        stats = ", ".join(parts)
+        print(f"{i}: {card.name} ({stats})")

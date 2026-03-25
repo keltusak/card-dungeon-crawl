@@ -2,11 +2,23 @@ from core import Card, Stun, Poison, Dodge, Equipment
 
 # ===== Zbraně =====
 sword = Equipment("Krátký Meč", "hand", [
-    Card("Píchnutí", damage=2),
+    Card("Škrábnutí", damage=2),
     Card("Bodnutí", damage=3),
     Card("Bodnutí", damage=3),
     Card("Seknutí", damage=4),
 ])
+
+flail = Equipment("Řemdich", "hand", [
+    Card("Švih", damage=3),
+    Card("Švih", damage=3),
+    Card("Vyčerpávající švih", damage=5, discard=1),
+])
+
+battle_axe = Equipment("Bitevní sekera", "hand", [
+    Card("Rozseknutí", damage=4),
+    Card("Široký sek", damage=3, target_type="all_enemies"),
+    Card("Drtivý úder", damage=7, cost=2),
+], two_handed=True)
 
 mace = Equipment("Palice", "hand", [
     Card("Slabý úder", damage=4),
@@ -14,7 +26,7 @@ mace = Equipment("Palice", "hand", [
     Card("Silný úder", damage=6, cost=2),
     Card("Omračovací úder", damage=3, effect=Stun(1),
          effect_chance=0.6, effect_on_damage=True),
-])
+], two_handed=True)
 
 poison_dagger = Equipment("Otrávená dýka", "hand", [
     Card("Jedovaté bodnutí", damage=2,
@@ -31,8 +43,8 @@ proboscis = Equipment("Sosák", "hand", [
 
 # ===== Štíty =====
 shield = Equipment("Štít", "hand", [
-    Card("Blok", block=2, target_type="self"),
-    Card("Blok", block=2, target_type="self"),
+    Card("Blok", block=3, target_type="self"),
+    Card("Blok", block=3, target_type="self"),
 ])
 
 shield_with_spike = Equipment("Štít s bodcem", "hand", [
@@ -43,8 +55,8 @@ shield_with_spike = Equipment("Štít s bodcem", "hand", [
 
 # ===== Zbroje =====
 leather_armor = Equipment("Kožená zbroj", "body", [
-    Card("Pokrytí", block=3, target_type="self"),
-    Card("Pokrytí", block=3, target_type="self"),
+    Card("Pokrytí", block=2, target_type="self"),
+    Card("Pokrytí", block=2, target_type="self"),
 ])
 
 # ===== Monstra =====
@@ -53,12 +65,41 @@ wings = Equipment("Hmyzí křídla", "body", [
     Card("Poletování", effect=Dodge(0.5, 2), target_type="self")
 ])
 
+ant_queen = Equipment("Mravenčí královna", "pocket", [
+    Card("Povolání mravenců", spawn_enemy="Mravenec",
+         spawn_count=2, target_type="self")
+])
+
+mandibles = Equipment("Kusadla", "hand", [
+    Card("Kousnutí", damage=1)
+])
+
 # ===== pomocné karty =====
 abakus = Equipment("Abakus", "belt", [
     Card("Příprava", draw=2, target_type="self"),
-    Card("Příprava", draw=1, discard=1, target_type="self", cost=0)
+    Card("Balance", draw=1, discard=1, target_type="self", cost=0)
 ])
-# ===== artefakty =====
-amulet_of_defense = Equipment("Talisman ochrany", "neck", [
+
+caltrops = Equipment("Kaltropy", "pocket", [
+    Card("Vrhnutí", damage=1, target_type="all_enemies", cost=0)
+])
+
+rabits_paw = Equipment("Králičí_packa", "pocket", [
+    Card("Ochranné štěstí", effect=Dodge(0.8, 1), cost=0)
+])
+# ===== prsteny =====
+ring_of_defense = Equipment("Prsten ochrany", "ring", [
     Card("Bariera", block=4, target_type="self")
+])
+
+wurm_ring = Equipment("Prstenočerv", "ring", [
+    Card("Přisátí", damage=2, lifesteal=1)
+])
+
+poisoners_ring = Equipment("Travičův prsten", "ring", [
+    Card("Tajná ampule", effect=Poison(2, 2))
+])
+
+ring_with_needle = Equipment("Prsten s jehlou", "ring", [
+    Card("Otrávené bodnutí", damage=1, effect=Poison(3, 3), effect_on_damage=True)
 ])

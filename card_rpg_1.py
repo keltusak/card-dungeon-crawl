@@ -35,6 +35,9 @@ class GameMap:
     def place_chest(self, x, y):
         self.grid[y][x] = "▣"
 
+    def place_door(self, x, y):
+        self.grid[y][x] = "▮"
+
     def generate_dungeon(self, room_min_count=5, room_max_count=7, room_min_size=2, room_max_size=3):
         rooms = []
 
@@ -99,7 +102,7 @@ class GameMap:
                 else:
                     break
 
-    def generate_objects(self, bonefire_count, chest_count, player_x, player_y):
+    def generate_objects(self, bonefire_count, chest_count, player_x, player_y, door_count=1):
         for _ in range(bonefire_count):
             while True:
                 x = random.randint(0, self.width - 1)
@@ -114,6 +117,14 @@ class GameMap:
                 y = random.randint(0, self.height - 1)
                 if self.grid[y][x] == "." and (x, y) != (player_x, player_y):
                     self.place_chest(x, y)
+                    break
+
+        for _ in range(door_count):
+            while True:
+                x = random.randint(0, self.width - 1)
+                y = random.randint(0, self.height - 1)
+                if self.grid[y][x] == "." and (x, y) != (player_x, player_y):
+                    self.place_door(x, y)
                     break
 
     def generate_enemies(self, count, player_x, player_y):
@@ -189,10 +200,32 @@ class GameMap:
                         print("\033[38;5;208m^\033[0m", end=" ")
                     elif char == "▣":
                         print("\033[38;5;94m▣\033[0m", end=" ")
+                    elif char == "▮":
+                        print("▮", end=" ")
                     else:
                         print(".", end=" ")
-
             print()
+
+    def next_level(player):
+        global game_map, player_x, player_y
+
+        # zvýšení levelu hráče (může se použít pro scaling nepřátel)
+        if not hasattr(player, "dungeon_level"):
+            player.dungeon_level = 1
+        else:
+            player.dungeon_level += 1
+
+        # vytvoření nové mapy
+        game_map = GameMap(20, 20)
+        rooms = game_map.generate_dungeon()
+
+        # reset pozice hráče do prvního pokoje
+        player_x, player_y = rooms[0].center()
+
+        # generování nepřátel a objektů (můžeme scale podle levelu)
+        game_map.generate_enemies_in_corridors(
+            3 + player.dungeon_level, player_x, player_y)
+        game_map.generate_objects(2, 2, player_x, player_y, door_count=1)
 
     @staticmethod
     def handle_tile(game_map, x, y, player, combat_function):
@@ -218,12 +251,17 @@ class GameMap:
             game_map.grid[y][x] = "."
 
         elif tile == "▣":
-            loot_options = [gear.sword, gear.shield,
-                            gear.mace, gear.poison_dagger, gear.proboscis]
+            loot_options = [gear.sword, gear.ring_of_defense, gear.abakus,
+                            gear.wurm_ring, gear.poisoners_ring, gear.ring_with_needle,
+                            gear.shield_with_spike, gear.caltrops, gear.flail, gear.rabits_paw]
             loot = random.choice(loot_options)
             player.inventory.append(loot)
             messages.append(f"Otevřel jsi truhlu a našel: {loot.name}")
             game_map.grid[y][x] = "."
+
+        if tile == "▮":
+            messages.append("Vstupuješ do dalšího patra!")
+            GameMap.next_level(player)
 
         return status, messages
 
@@ -260,30 +298,14 @@ def show_inventory(player):
                 print("Batoh je prázdný!")
                 input("ENTER pro pokračování...")
                 continue
+
             idx = get_valid_index(
                 "Index itemu z batohu: ", len(player.inventory))
             eq = player.inventory[idx]
+
             print(f"\n--- {eq.name} ---")
-            for card in eq.cards:
-                parts = []
-                if card.damage:
-                    parts.append(f"DMG:{card.damage}")
-                if card.block:
-                    parts.append(f"BLOCK:{card.block}")
-                if card.lifesteal:
-                    parts.append(f"LIFESTEAL:{card.lifesteal}")
-                if card.draw:
-                    parts.append(f"DRAW:{card.draw}")
-                if card.discard:
-                    parts.append(f"DRAW:{card.discard}")
-                if card.effect:
-                    chance = getattr(card, "effect_chance", 1.0)
-                    parts.append(
-                        f"EFFECT:{card.effect.name} ({int(chance*100)}%)")
-                if card.cost:
-                    parts.append(f"COST:{card.cost}")
-                stats = ", ".join(parts)
-                print(f"  - {card.name} ({stats})")
+            core.print_cards(eq.cards)
+
             input("ENTER pro pokračování...")
 
         elif choice == "2":
@@ -297,7 +319,7 @@ def show_inventory(player):
             player.build_deck()
 
         elif choice == "3":
-            slot = input("Slot (hand/body/belt/pocket/neck): ")
+            slot = input("Slot (hand/body/belt/pocket/ring): ")
             if slot not in player.slots:
                 print("Neplatný slot!")
                 input("ENTER pro pokračování...")
@@ -325,31 +347,16 @@ def show_inventory(player):
             print("\n--- Aktuální deck ---")
             deck_exists = False
 
+            added_items = set()
+
             for slot, items in player.slots.items():
                 for eq in items:
-                    if eq:  # pokud je něco vybavené
+                    if eq and id(eq) not in added_items:
+                        added_items.add(id(eq))
                         deck_exists = True
+
                         print(f"\n--- {eq.name} ---")
-                        for card in eq.cards:
-                            parts = []
-                            if card.damage:
-                                parts.append(f"DMG:{card.damage}")
-                            if card.block:
-                                parts.append(f"BLOCK:{card.block}")
-                            if card.lifesteal:
-                                parts.append(f"LIFESTEAL:{card.lifesteal}")
-                            if card.draw:
-                                parts.append(f"DRAW:{card.draw}")
-                            if card.discard:
-                                parts.append(f"DRAW:{card.discard}")
-                            if card.effect:
-                                chance = getattr(card, "effect_chance", 1.0)
-                                parts.append(
-                                    f"EFFECT:{card.effect.name} ({int(chance*100)}%)")
-                            if card.cost:
-                                parts.append(f"COST:{card.cost}")
-                            stats = ", ".join(parts)
-                            print(f"  - {card.name} ({stats})")
+                        core.print_cards(eq.cards)
 
             if not deck_exists:
                 print("Deck je prázdný!")
@@ -422,14 +429,26 @@ def create_enemy_by_name(name):
         "Obří komár": {
             "hp": 5,
             "equipment": [gear.proboscis, gear.wings]
+        },
+        "Mraveniště": {
+            "hp": 20,
+            "equipment": [gear.ant_queen],
+            "max_dmg_taken": 4
+        },
+        "Mravenec": {
+            "hp": 1,
+            "equipment": [gear.mandibles],
+            "max_dmg_taken": 4
         }
+
+
     }
 
     template = enemy_types[name]
 
     enemy = Character(name, template["hp"])
     for item in template["equipment"]:
-        enemy.equip_item(item)
+        enemy.equip_item(item, suppress_print=True)
     enemy.build_deck()
 
     return enemy
@@ -460,6 +479,13 @@ def create_enemy_group():
             "enemy": "Vrah",
             "min": 1,
             "max": 2
+        },
+        {
+            "type": "mravenci",
+            "enemy": "Mraveniště",
+            "min": 1,
+            "max": 1
+
         }
     ]
 
@@ -510,7 +536,7 @@ class Character:
             "body": [None],
             "belt": [None, None],
             "pocket": [None, None, None],
-            "neck": [None]
+            "ring": [None, None]
         }
         self.inventory = []
         self.equipment = []
@@ -522,10 +548,13 @@ class Character:
     def build_deck(self):
         self.deck = []
 
+        added_items = set()
+
         for slot_list in self.slots.values():
             for item in slot_list:
-                if item:
+                if item and id(item) not in added_items:
                     self.deck.extend(item.cards)
+                    added_items.add(id(item))
 
         random.shuffle(self.deck)
 
@@ -539,10 +568,15 @@ class Character:
             if self.deck:
                 self.hand.append(self.deck.pop())
 
-    def play_card(self, index, target):
-        card = self.hand.pop(index)
-        card.play(self, target)
-        self.discard.append(card)
+    def play_card(self, index, target=None, enemies_list=None, create_enemy_func=None):
+        if 0 <= index < len(self.hand):
+            card = self.hand.pop(index)
+            # předáme všechny potřebné argumenty kartě
+            card.play(user=self, target=target, enemies_list=enemies_list,
+                      create_enemy_func=create_enemy_func)
+            self.discard.append(card)
+        else:
+            print("Neplatný index karty")
 
     def take_damage(self, amount, ignore_armor=False, suppress_print=False):
         for effect in self.status_effects:
@@ -567,17 +601,30 @@ class Character:
             print(f"{self.name} dostal {reduced} dmg (HP: {self.hp})")
         return reduced
 
-    def equip_item(self, item):
-        slots = self.slots[item.slot_type]
+    def equip_item(self, item, suppress_print=False):
+        # pokud je obouruční, musí být volné **oba hand sloty**
+        if item.slot_type == "hand" and getattr(item, "two_handed", False):
+            if any(self.slots["hand"]):
+                print("Potřebuješ volné oba hand sloty pro obouruční zbraň!")
+                input("ENTER pro pokračování...")
+                return False
+            else:
+                self.slots["hand"][0] = item
+                self.slots["hand"][1] = item
+                if item in self.inventory:
+                    self.inventory.remove(item)
+                print(f"{self.name} vybavil obouruční zbraň {item.name}")
+                return True
 
+        # standardní logika pro jednoruké zbraně
+        slots = self.slots[item.slot_type]
         for i in range(len(slots)):
             if slots[i] is None:
                 slots[i] = item
-
                 if item in self.inventory:
                     self.inventory.remove(item)
-
-                print(f"{self.name} vybavil {item.name}")
+                if not suppress_print:
+                    print(f"{self.name} vybavil {item.name}")
                 return True
 
         print("Není volný slot")
@@ -587,9 +634,17 @@ class Character:
         item = self.slots[slot_type][index]
 
         if item:
+            # pokud je obouruční a slot je "hand", odeber oba sloty
+            if slot_type == "hand" and getattr(item, "two_handed", False):
+                for i in range(len(self.slots["hand"])):
+                    if self.slots["hand"][i] == item:
+                        self.slots["hand"][i] = None
+                print(f"{self.name} sundal obouruční zbraň: {item.name}")
+            else:
+                self.slots[slot_type][index] = None
+                print(f"{self.name} sundal {item.name}")
+
             self.inventory.append(item)
-            self.slots[slot_type][index] = None
-            print(f"{self.name} sundal {item.name}")
         else:
             print("Slot je prázdný")
 
@@ -613,24 +668,7 @@ class Character:
 
     def show_hand(self):
         print("\nTvoje karty:")
-        for i, card in enumerate(self.hand):
-            parts = []
-
-            if card.damage:
-                parts.append(f"DMG: {card.damage}")
-
-            if card.block:
-                parts.append(f"BLOCK: {card.block}")
-
-            if card.effect:
-                parts.append(f"EFFECT: {card.effect.name}")
-
-            if card.cost:
-                parts.append(f"COST: {card.cost}")
-
-            stats = ", ".join(parts)
-
-            print(f"{i}: {card.name} ({stats})")
+        core.print_cards(player.hand)
 
     def player_turn(player, enemies):
         energy = 2
@@ -766,9 +804,11 @@ def combat(player, enemies):
             result = Character.player_turn(player, enemies)
             if result == "enemy_dead":
                 print("Vyhrál jsi!")
+                input("ENTER pro pokračování...")
                 return True
             elif result == "player_dead":
                 print("Prohrál jsi!")
+                input("ENTER pro pokračování...")
                 return False
         print(" ")
 
@@ -788,10 +828,12 @@ def combat(player, enemies):
             enemy.draw(1)
 
             if enemy.hand:
-                enemy.play_card(0, player)
+                enemy.play_card(0, target=player, enemies_list=enemies,
+                                create_enemy_func=create_enemy_by_name)
 
             if player.hp <= 0:
                 print("Prohrál jsi!")
+                input("ENTER pro pokračování...")
                 return False
 
         input("Stiskni cokoliv pro vstup do dalšího kola:")
@@ -799,13 +841,10 @@ def combat(player, enemies):
 
 # ===== MAIN LOOP ========
 player = Character("Hráč", 20)
-player.equipment = [gear.mace, gear.shield_with_spike,
-                    gear.leather_armor, gear.abakus]
-player.equip_item(gear.mace)
-player.equip_item(gear.shield)
+player.inventory.append(gear.shield)
+player.inventory.append(gear.sword)
+player.equip_item(gear.battle_axe)
 player.equip_item(gear.leather_armor)
-player.equip_item(gear.abakus)
-
 
 game_map = GameMap(20, 20)
 rooms = game_map.generate_dungeon()
