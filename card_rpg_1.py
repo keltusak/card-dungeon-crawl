@@ -4,6 +4,7 @@ import core
 import gear
 import sys
 import os
+from collections import deque
 
 
 def clear_screen():
@@ -37,6 +38,45 @@ class GameMap:
 
     def place_door(self, x, y):
         self.grid[y][x] = "▮"
+
+    def find_best_door_position(self, player_x, player_y):
+        visited = set()
+        queue = deque()
+        queue.append((player_x, player_y, 0))  # x, y, score
+
+        best_pos = (player_x, player_y)
+        best_score = -1
+
+        while queue:
+            x, y, score = queue.popleft()
+
+            if (x, y) in visited:
+                continue
+            visited.add((x, y))
+
+            if self.grid[y][x] == ".":
+                # bonus za nepřátele kolem
+                enemy_bonus = 0
+                for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                    nx, ny = x+dx, y+dy
+                    if 0 <= nx < self.width and 0 <= ny < self.height:
+                        if self.grid[ny][nx] == "E":
+                            enemy_bonus += 3
+
+                total_score = score + enemy_bonus
+
+                if total_score > best_score:
+                    best_score = total_score
+                    best_pos = (x, y)
+
+            # šíření BFS
+            for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                nx, ny = x+dx, y+dy
+                if 0 <= nx < self.width and 0 <= ny < self.height:
+                    if self.grid[ny][nx] != "#":
+                        queue.append((nx, ny, score + 1))
+
+        return best_pos
 
     def generate_dungeon(self, room_min_count=5, room_max_count=7, room_min_size=2, room_max_size=3):
         rooms = []
@@ -80,7 +120,7 @@ class GameMap:
         for y in range(min(y1, y2), max(y1, y2) + 1):
             self.grid[y][x] = "."
 
-    def add_dead_end_corridors(self, count=4, max_length=3):
+    def add_dead_end_corridors(self, count=4, max_length=4):
         for _ in range(count):
             possible_starts = [(x, y) for y in range(self.height)
                                for x in range(self.width) if self.grid[y][x] == "."]
@@ -121,11 +161,10 @@ class GameMap:
 
         for _ in range(door_count):
             while True:
-                x = random.randint(0, self.width - 1)
-                y = random.randint(0, self.height - 1)
-                if self.grid[y][x] == "." and (x, y) != (player_x, player_y):
-                    self.place_door(x, y)
-                    break
+                x, y = self.find_best_door_position(player_x, player_y)
+                self.place_door(x, y)
+                self.place_door_guards(x, y, count=3, radius=3)
+                break
 
     def generate_enemies(self, count, player_x, player_y):
         for _ in range(count):
@@ -136,6 +175,25 @@ class GameMap:
                 if (x, y) != (player_x, player_y) and self.grid[y][x] == ".":
                     self.place_enemy(x, y)
                     break
+
+    def place_door_guards(self, door_x, door_y, count=2, radius=3):
+        possible_positions = []
+
+        for y in range(door_y - radius, door_y + radius + 1):
+            for x in range(door_x - radius, door_x + radius + 1):
+
+                if 0 <= x < self.width and 0 <= y < self.height:
+                    if self.grid[y][x] == ".":
+                        # nechceme úplně u dveří (optional)
+                        dist = abs(x - door_x) + abs(y - door_y)
+                        if dist >= 1:
+                            possible_positions.append((x, y))
+
+        random.shuffle(possible_positions)
+
+        for i in range(min(count, len(possible_positions))):
+            x, y = possible_positions[i]
+            self.place_enemy(x, y)
 
     def is_corridor_tile(self, x, y):
         if self.grid[y][x] != ".":
@@ -846,10 +904,10 @@ player.inventory.append(gear.sword)
 player.equip_item(gear.battle_axe)
 player.equip_item(gear.leather_armor)
 
-game_map = GameMap(20, 20)
+game_map = GameMap(24, 20)
 rooms = game_map.generate_dungeon()
 player_x, player_y = rooms[0].center()
-game_map.generate_enemies_in_corridors(5, player_x, player_y)
+game_map.generate_enemies_in_corridors(4, player_x, player_y)
 game_map.generate_objects(2, 2, player_x, player_y,)
 
 while player.hp > 0:
