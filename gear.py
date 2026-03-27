@@ -1,9 +1,21 @@
 from core import Card, Stun, Poison, Dodge, Equipment
 
 # ===== Zbraně =====
+dagger = Equipment("Dýka", "hand", [
+    Card("Bodnutí", damage=3),
+    Card("Podlé bodnutí", damage=4, cost=0)
+])
+
 sword = Equipment("Krátký Meč", "hand", [
     Card("Škrábnutí", damage=2),
     Card("Bodnutí", damage=3),
+    Card("Seknutí", damage=4),
+    Card("Seknutí", damage=4),
+])
+
+broken_sword = Equipment("Poškozený Meč", "hand", [
+    Card("Tupé ostří", damage=2),
+    Card("Tupé ostří", damage=2),
     Card("Bodnutí", damage=3),
     Card("Seknutí", damage=4),
 ])
@@ -15,13 +27,16 @@ flail = Equipment("Řemdich", "hand", [
 ])
 
 battle_axe = Equipment("Bitevní sekera", "hand", [
-    Card("Rozseknutí", damage=4),
+    Card("Seknutí", damage=4),
+    Card("Seknutí", damage=4),
+    Card("Rozseknutí", damage=5),
     Card("Široký sek", damage=3, target_type="all_enemies"),
     Card("Drtivý úder", damage=7, cost=2),
 ], two_handed=True)
 
 mace = Equipment("Palice", "hand", [
     Card("Slabý úder", damage=4),
+    Card("Úder", damage=5),
     Card("Úder", damage=5),
     Card("Silný úder", damage=6, cost=2),
     Card("Omračovací úder", damage=3, effect=Stun(1),
@@ -44,12 +59,12 @@ proboscis = Equipment("Sosák", "hand", [
 # ===== Štíty =====
 shield = Equipment("Štít", "hand", [
     Card("Blok", block=3, target_type="self"),
-    Card("Blok", block=3, target_type="self"),
+    Card("Silný blok", block=4, target_type="self"),
 ])
 
 shield_with_spike = Equipment("Štít s bodcem", "hand", [
-    Card("Blok", block=2, target_type="self"),
-    Card("Blok s bodcem", block=2, damage=2),
+    Card("Blok", block=3, target_type="self"),
+    Card("Blok s bodcem", block=3, damage=3),
 ])
 
 
@@ -74,18 +89,39 @@ mandibles = Equipment("Kusadla", "hand", [
     Card("Kousnutí", damage=1)
 ])
 
+horn = Equipment("Svolávací roh", "belt", [
+    Card("Varovné troubení", spawn_enemy="Goblin",
+         spawn_count=1, target_type="self")
+])
+
+reflexis = Equipment("Reflexy", "pocket", [
+    Card("Mrštnost", effect=Dodge(0.6, 2), target_type="self"),
+])
+
 # ===== pomocné karty =====
+war_paints = Equipment("Válečné barvy", "pocket", [
+    Card("Bojový pokřik", buff_strenght=1, target_type="self")
+])
+
 abakus = Equipment("Abakus", "belt", [
     Card("Příprava", draw=2, target_type="self"),
     Card("Balance", draw=1, discard=1, target_type="self", cost=0)
+])
+
+battle_plans = Equipment("Bitevní plány", "belt", [
+    Card("Taktika", draw=1, buff_strenght=1, target_type="self"),
 ])
 
 caltrops = Equipment("Kaltropy", "pocket", [
     Card("Vrhnutí", damage=1, target_type="all_enemies", cost=0)
 ])
 
-rabits_paw = Equipment("Králičí_packa", "pocket", [
+rabits_paw = Equipment("Králičí packa", "pocket", [
     Card("Ochranné štěstí", effect=Dodge(0.8, 1), cost=0)
+])
+
+madmans_eye = Equipment("Šílencovo oko", "pocket", [
+    Card("Šílené vize", damage=2, draw=2, target_type="self", cost=0)
 ])
 # ===== prsteny =====
 ring_of_defense = Equipment("Prsten ochrany", "ring", [
