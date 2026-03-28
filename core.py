@@ -240,7 +240,7 @@ SYNERGIES = [
     {
         "requires": ["Prstenočerv", "Mravenec"],
         "cards": [
-            Card("Požehnání malých", Dodge((0.3, 3)))  # potom vylepšit
+            Card("Požehnání malých", effect=Dodge(0.3, 3), target_type="self") # potom vylepšit
         ]
     },
 ]
