@@ -700,23 +700,16 @@ def create_enemy_by_name(name):
 
 def create_enemy_group(dungeon_level=1):
     encounter_types = [
-        {"type": "komáři", "enemies": [
-            ("Obří komár", 1, 3)], "levels": [1, 2]},
+        {"type": "komáři", "enemies": [("Obří komár", 1, 3)], "levels": [1, 2]},
         {"type": "goblini", "enemies": [("Goblin", 1, 2)], "levels": [1, 2]},
         {"type": "strážci", "enemies": [("Strážce", 1, 2)], "levels": [1, 2]},
         {"type": "vrazi", "enemies": [("Vrah", 1, 2)], "levels": [1, 2, 3]},
-        {"type": "mravenci", "enemies": [
-            ("Mraveniště", 1, 1)], "levels": [1, 2]},
+        {"type": "mravenci", "enemies": [("Mraveniště", 1, 1)], "levels": [1, 2]},
         #od lvl 2
-        {"type": "gobliní průzkumník", "enemies":
-            ("Goblinní zvěd", 1, 1), "levels": [2, 3]},
-        {"type": "gobliní hlídka", "enemies": [("Goblinní válečník", 1, 1), ("Goblin", 1, 1)], 
-         "levels": [2, 3]},
-        {"type": "gobliní stráž",
-         "enemies": [("Goblinní válečník", 1, 1), ("Goblinní zvěd", 1, 1)],
-         "levels": [2, 3]},
-         {"type": "Lovící pavouk",
-         "enemies": ("Pavouk s vejcem", 1, 1),"levels": [3]},
+        {"type": "gobliní průzkumník", "enemies":[("Goblinní zvěd", 1, 1)], "levels": [2, 3]},
+        {"type": "gobliní hlídka", "enemies": [("Goblinní válečník", 1, 1), ("Goblin", 1, 1)], "levels": [2, 3]},
+        {"type": "gobliní stráž","enemies": [("Goblinní válečník", 1, 1), ("Goblinní zvěd", 1, 1)],"levels": [2, 3]},
+        {"type": "Lovící pavouk","enemies": [("Pavouk s vejcem", 1, 1)],"levels": [3]},
     ]
 
     possible_encounters = [
