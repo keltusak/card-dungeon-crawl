@@ -806,7 +806,7 @@ class Character:
         self.status_effects = []
         self.block = 0
         self.temporary_strenght = 0
-        player.fatigue = 0
+        player.fetigue = 0
 
     def add_block(self, amount):
         self.block += amount
@@ -1036,7 +1036,7 @@ def combat(player, enemies):
             enemy.process_status()
             # potřeba kotrolovat zda nepřítel neumřel
             if enemy.hp <= 0:
-                continue
+                return True
 
             enemy.draw(1)
 
@@ -1058,6 +1058,7 @@ player.dungeon_level = 1
 player.fetigue = 0
 player.equip_item(gear.shield)
 player.equip_item(gear.sword)
+player.equip_item(gear.poisoners_ring)
 player.equip_item(gear.leather_armor)
 
 game_map = GameMap(24, 20)
