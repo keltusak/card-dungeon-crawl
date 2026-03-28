@@ -1,6 +1,7 @@
 from core import Card, Stun, Poison, Dodge, Equipment
 
 # ===== Zbraně =====
+
 dagger = Equipment("Dýka", "hand", [
     Card("Bodnutí", damage=3),
     Card("Podlé bodnutí", damage=4, cost=0)
@@ -23,6 +24,7 @@ broken_sword = Equipment("Poškozený Meč", "hand", [
 flail = Equipment("Řemdich", "hand", [
     Card("Švih", damage=3),
     Card("Švih", damage=3),
+    Card("Rozmáchnutí", damage=2, target_type="all_enemies"),
     Card("Vyčerpávající švih", damage=5, discard=1),
 ])
 
@@ -45,7 +47,7 @@ mace = Equipment("Palice", "hand", [
 
 poison_dagger = Equipment("Otrávená dýka", "hand", [
     Card("Jedovaté bodnutí", damage=2,
-         effect=Poison(2, 3), effect_on_damage=True),
+         effect=Poison(2, 2), effect_on_damage=True),
     Card("Bodnutí", damage=3)
 ])
 
@@ -57,6 +59,7 @@ proboscis = Equipment("Sosák", "hand", [
 ])
 
 # ===== Štíty =====
+
 shield = Equipment("Štít", "hand", [
     Card("Blok", block=3, target_type="self"),
     Card("Silný blok", block=4, target_type="self"),
@@ -69,12 +72,14 @@ shield_with_spike = Equipment("Štít s bodcem", "hand", [
 
 
 # ===== Zbroje =====
+
 leather_armor = Equipment("Kožená zbroj", "body", [
     Card("Pokrytí", block=2, target_type="self"),
     Card("Pokrytí", block=2, target_type="self"),
 ])
 
 # ===== Monstra =====
+
 wings = Equipment("Hmyzí křídla", "body", [
     Card("Poletování", effect=Dodge(0.5, 2), target_type="self"),
     Card("Poletování", effect=Dodge(0.5, 2), target_type="self")
@@ -98,7 +103,32 @@ reflexis = Equipment("Reflexy", "pocket", [
     Card("Mrštnost", effect=Dodge(0.6, 2), target_type="self"),
 ])
 
-# ===== pomocné karty =====
+small_fangs = Equipment("Malé chelicery", "hand", [
+    Card("Kousnutí",damage=2, effect=Poison(1,3),effect_on_damage=True),
+    Card("Kousnutí",damage=2, effect=Poison(1,3),effect_on_damage=True),
+])
+
+
+fangs = Equipment("Chelicery", "hand", [
+    Card("Kousnutí",damage=4, effect=Poison(2,4),effect_on_damage=True),
+    Card("Kousnutí",damage=4, effect=Poison(2,4),effect_on_damage=True),
+    Card("Paralizující kousnutí",damage=3, effect=Stun(1),effect_chance=0.4, effect_on_damage=True),
+])
+
+exoskelet = Equipment("Exoskelet", "body", [
+    Card("Pokrytí", block=3, target_type="self"),
+    Card("Pokrytí", block=4, target_type="self"),
+])
+
+spiders_cocon = Equipment("Kokon", "belt", [
+    Card("Vylíhnutí", spawn_enemy="Pavoučí mládě",
+         spawn_count=1, target_type="self")
+])
+
+
+
+# ===== Pomocné karty =====
+
 war_paints = Equipment("Válečné barvy", "pocket", [
     Card("Bojový pokřik", buff_strenght=1, target_type="self")
 ])
@@ -123,7 +153,8 @@ rabits_paw = Equipment("Králičí packa", "pocket", [
 madmans_eye = Equipment("Šílencovo oko", "pocket", [
     Card("Šílené vize", damage=2, draw=2, target_type="self", cost=0)
 ])
-# ===== prsteny =====
+# ===== Prsteny =====
+
 ring_of_defense = Equipment("Prsten ochrany", "ring", [
     Card("Bariera", block=4, target_type="self")
 ])
@@ -138,4 +169,15 @@ poisoners_ring = Equipment("Travičův prsten", "ring", [
 
 ring_with_needle = Equipment("Prsten s jehlou", "ring", [
     Card("Otrávené bodnutí", damage=1, effect=Poison(3, 3), effect_on_damage=True)
+])
+
+# ===== Společníci =====
+
+friendly_ant = Equipment("Mravenec", "companion", [
+    Card("Kousnutí", damage=1, cost=0)
+])
+
+crow = Equipment("Vrána", "companion", [
+    Card("Klovnutí", damage=2, effect=Dodge(0.2, 1), cost=1),
+    Card("Průzkum", draw=1, discard=1, cost=1)
 ])

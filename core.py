@@ -214,9 +214,15 @@ def print_cards(cards):
 
 SYNERGIES = [
     {
+        "requires": ["Krátký Meč", "Štít s bodcem"],
+        "cards": [
+            Card("Útok a kryt", damage=4, block=4)
+        ]
+    },
+    {
         "requires": ["Krátký Meč", "Štít"],
         "cards": [
-            Card("Útok a kryt", damage=4, block=4, cost=1)
+            Card("Útok a kryt", damage=4, block=4)
         ]
     },
     {
@@ -228,7 +234,13 @@ SYNERGIES = [
     {
         "requires": ["Abakus", "Bitevní plány"],
         "cards": [
-            Card("Stratéguv triumf", draw=3, cost=1)  # potom vylepšit
+            Card("Stratéguv triumf", draw=3)  # potom vylepšit
+        ]
+    },
+    {
+        "requires": ["Prstenočerv", "Mravenec"],
+        "cards": [
+            Card("Požehnání malých", Dodge((0.3, 3)))  # potom vylepšit
         ]
     },
 ]

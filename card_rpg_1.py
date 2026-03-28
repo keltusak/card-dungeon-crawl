@@ -548,14 +548,14 @@ def create_enemy_by_name(name):
         },
         "Strážce": {
             "hp": 15,
-            "equipment": [gear.sword, gear.shield]
+            "equipment": [gear.broken_sword, gear.shield]
         },
         "Obří komár": {
             "hp": 5,
             "equipment": [gear.proboscis, gear.wings]
         },
         "Mraveniště": {
-            "hp": 16,
+            "hp": 14,
             "equipment": [gear.ant_queen],
         },
         "Mravenec": {
@@ -564,14 +564,20 @@ def create_enemy_by_name(name):
         },
         "Goblinní zvěd": {
             "hp": 12,
-            "equipment": [gear.sword, gear.horn, gear.reflexis]
+            "equipment": [gear.broken_sword, gear.horn, gear.reflexis]
         },
         "Goblinní válečník": {
             "hp": 16,
             "equipment": [gear.sword, gear.shield, gear.war_paints]
         },
-
-
+        "Pavoučí mládě": {
+            "hp": 7,
+            "equipment": [gear.small_fangs, gear.exoskelet],
+        },
+        "Pavouk s vejcem": {
+            "hp": 16,
+            "equipment": [gear.fangs, gear.exoskelet, gear.spiders_cocon],
+        },
     }
 
     template = enemy_types[name]
@@ -593,14 +599,16 @@ def create_enemy_group(dungeon_level=1):
         {"type": "vrazi", "enemies": [("Vrah", 1, 2)], "levels": [1, 2, 3]},
         {"type": "mravenci", "enemies": [
             ("Mraveniště", 1, 1)], "levels": [1, 2]},
-        # Nové typy pro level 2 a 3
-        {"type": "gobliní průzkum", "enemies": [
-            ("Goblinní zvěd", 1, 2)], "levels": [2, 3]},
-        {"type": "gobliní hlídka", "enemies": [
-            ("Goblinní válečník", 1, 2)], "levels": [2, 3]},
-        {"type": "gobliní dvojice",
+        #od lvl 2
+        {"type": "gobliní průzkumník", "enemies":
+            ("Goblinní zvěd", 1, 1), "levels": [2, 3]},
+        {"type": "gobliní hlídka", "enemies": [("Goblinní válečník", 1, 1), ("Goblin", 1, 1)], 
+         "levels": [2, 3]},
+        {"type": "gobliní stráž",
          "enemies": [("Goblinní válečník", 1, 1), ("Goblinní zvěd", 1, 1)],
          "levels": [2, 3]},
+         {"type": "Lovící pavouk",
+         "enemies": ("Pavouk s vejcem", 1, 1),"levels": [3]},
     ]
 
     possible_encounters = [
@@ -659,7 +667,8 @@ class Character:
             "body": [None],
             "belt": [None, None],
             "pocket": [None, None, None],
-            "ring": [None, None]
+            "ring": [None, None],
+            "companion": [None]
         }
         self.inventory = []
         self.equipment = []
@@ -694,10 +703,20 @@ class Character:
             if not self.deck:
                 self.deck = self.discard
                 self.discard = []
-                random.shuffle(self.deck)
-
+                shuffle_deck(self.deck, shuffler=self)
+                
             if self.deck:
                 self.hand.append(self.deck.pop())
+
+    def apply_fatigue(self):
+        if self.fatigue > 0:
+            print(f"{self.name} cítí únavu a ztrácí {self.fatigue} HP!")
+            input("ENTER pro pokračování...")
+            self.hp -= self.fatigue
+            if self.hp < 0:
+                self.hp = 0
+        self.fatigue += 1
+
 
     def play_card(self, index, target=None, enemies_list=None, create_enemy_func=None):
         if 0 <= index < len(self.hand):
@@ -787,10 +806,11 @@ class Character:
         self.status_effects = []
         self.block = 0
         self.temporary_strenght = 0
+        player.fatigue = 0
 
     def add_block(self, amount):
         self.block += amount
-        print(f"{self.name} získal {amount} block")
+        print(f"{Colors.GRAY}{self.name} získal {amount} block{Colors.RESET}")
 
     def add_temporary_strenght(self, amount):
         self.temporary_strenght += amount
@@ -815,12 +835,12 @@ class Character:
 
             print(f"\n{Colors.GREEN}--- Tvůj tah ---{Colors.RESET}")
             print(
-                f"{player.name} (HP: {player.hp}, Block: {player.block}, Energy: {energy}, temporary_strenght: {player.temporary_strenght})")
+                f"{player.name} (HP: {player.hp}, {Colors.GRAY}Block:{player.block}{Colors.RESET}, Energy: {energy}, temporary_strenght: {player.temporary_strenght})")
 
             print("\nNepřátelé:")
             for i, e in enumerate(enemies):
                 if e.hp > 0:
-                    print(f"{i}: {e.name} (HP: {e.hp}, Block: {e.block})")
+                    print(f"{i}: {e.name} (HP: {e.hp}, {Colors.GRAY}Block: {e.block}{Colors.RESET})")
 
             player.show_hand()
 
@@ -875,7 +895,6 @@ class Character:
 
             print(f"\nZbývá energie: {energy}")
 
-            # 👇 KLÍČOVÁ VĚC
             input("\nENTER pro pokračování...")
 
         return None
@@ -918,6 +937,19 @@ def choose_enemy(enemies):
         if 0 <= index < len(alive):
             return alive[index]
 
+def shuffle_deck(deck, shuffler):
+        random.shuffle(deck)
+
+        if shuffler is player:  
+            if hasattr(player, "fetigue"):
+                if player.fetigue > 0:
+                    print(f"{Colors.RED}{player.name} cítí únavu a ztrácí {player.fetigue} HP!{Colors.RESET}")
+                    input("ENTER pro pokračování...")
+                    player.hp -= player.fetigue
+                    if player.hp < 0:
+                        player.hp = 0
+                    print(f"HP hráče: {player.hp}/{player.max_hp}")
+                player.fetigue += 1
 
 class Colors:
     RED = "\033[91m"
@@ -943,11 +975,12 @@ def combat(player, enemies):
         clear_screen()
         print("\n--- Nové kolo ---")
         player.block = 0
-        print(f"- {player.name} (HP: {player.hp}, Block: {player.block})")
+        print(f"- {player.name} (HP: {player.hp}, {Colors.GRAY}Block: {player.block}{Colors.RESET})")
         print("\nNepřátelé:")
         for e in enemies:
             if e.hp > 0:
-                print(f"- {e.name} (HP: {e.hp}, Block: {e.block})")
+                print(f"- {e.name} (HP: {e.hp}, {Colors.GRAY}Block: {e.block}{Colors.RESET})")
+        print()
 
         # ===== PLAYER =====
         if player.is_stunned():
@@ -1022,7 +1055,7 @@ def combat(player, enemies):
 # ===== MAIN LOOP ========
 player = Character("Hráč", 20)
 player.dungeon_level = 1
-player.inventory.append(gear.mace)
+player.fetigue = 0
 player.equip_item(gear.shield)
 player.equip_item(gear.sword)
 player.equip_item(gear.leather_armor)
@@ -1039,9 +1072,9 @@ while player.hp > 0:
     GameMap.update_visibility(game_map, player_x, player_y)
     GameMap.draw_map(game_map, player_x, player_y)
 
-    print(f"\nHP: {player.hp}")
+    print(f"\nHP: {player.hp}, Dungeon lvl: {player.dungeon_level}")
 
-    cmd = input("Pohyb (WASD, q = konec, i = inventář, h = help): ").lower()
+    cmd = input("\nPohyb (WASD, q = konec, i = inventář, h = help): ").lower()
 
     if cmd == "q":
         break
