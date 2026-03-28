@@ -72,7 +72,7 @@ class Card:
 
                 while True:
                     choice = input(
-                        f"Vyber kartu k zahazení (0-{len(user.hand)-1}): ")
+                        f"Vyber kartu k zahození (0-{len(user.hand)-1}): ")
                     if choice.isdigit():
                         idx = int(choice)
                         if 0 <= idx < len(user.hand):
@@ -203,10 +203,10 @@ def print_cards(cards):
             parts.append(f"DRAW:{card.draw}")
         if getattr(card, "discard", 0):
             parts.append(f"DISCARD:{card.discard}")
-        if card.cost:
-            parts.append(f"COST:{card.cost}")
         if getattr(card, "target_type", None) == "all_enemies":
             parts.append("AOE")
+        #cenu asi vypsat vždy zatím
+        parts.append(f"COST:{card.cost}")
 
         stats = ", ".join(parts)
         print(f"{i}: {card.name} ({stats})")

@@ -100,7 +100,7 @@ horn = Equipment("Svolávací roh", "belt", [
 ])
 
 reflexis = Equipment("Reflexy", "pocket", [
-    Card("Mrštnost", effect=Dodge(0.6, 2), target_type="self"),
+    Card("Mrštnost", effect=Dodge(0.5, 2), target_type="self"),
 ])
 
 small_fangs = Equipment("Malé chelicery", "hand", [
@@ -147,7 +147,7 @@ caltrops = Equipment("Kaltropy", "pocket", [
 ])
 
 rabits_paw = Equipment("Králičí packa", "pocket", [
-    Card("Ochranné štěstí", effect=Dodge(0.8, 1), cost=0)
+    Card("Ochranné štěstí", effect=Dodge(0.8, 1), target_type="self", cost=0)
 ])
 
 madmans_eye = Equipment("Šílencovo oko", "pocket", [

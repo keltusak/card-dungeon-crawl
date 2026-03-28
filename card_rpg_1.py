@@ -137,33 +137,104 @@ class GameMap:
                 nx, ny = x + dx, y + dy
 
                 if 0 < nx < self.width-1 and 0 < ny < self.height-1 and self.grid[ny][nx] == "#":
-                    self.grid[ny][nx] = "."  # vytvoř chodbu
+                    self.grid[ny][nx] = "."
                     x, y = nx, ny
                 else:
                     break
+    
+    def generate_bonefire_positions(self, player_x, player_y, existing_fires=None, min_distance=3, max_attempts=100):
+        if existing_fires is None:
+            existing_fires = []
+
+        candidates = []
+
+        for y in range(1, self.height - 1):
+            for x in range(1, self.width - 1):
+                # Musí být volné a ne tam, kde je hráč
+                if self.grid[y][x] != "." or (x, y) == (player_x, player_y):
+                    continue
+
+                # Kontrola vzdálenosti od ostatních ohnišť
+                if any(abs(x - fx) + abs(y - fy) < min_distance for fx, fy in existing_fires):
+                    continue
+
+                # Kontrola 3x3 volných míst
+                free_count = sum(
+                    1
+                    for dy in (-1, 0, 1)
+                    for dx in (-1, 0, 1)
+                    if self.grid[y + dy][x + dx] == "."
+                )
+                if free_count >= 5:
+                    candidates.append((x, y))
+                else:
+                    # případně slepá ulička: jen jedna cesta ven
+                    neighbors = [
+                        (x + dx, y + dy)
+                        for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]
+                        if 0 <= x + dx < self.width and 0 <= y + dy < self.height
+                    ]
+                    paths = sum(1 for nx, ny in neighbors if self.grid[ny][nx] == ".")
+                    if paths == 1:
+                        candidates.append((x, y))
+
+        if not candidates:
+            # fallback
+            return [(random.randint(0, self.width - 1), random.randint(0, self.height - 1))]
+
+        chosen = random.choice(candidates)
+        existing_fires.append(chosen)  # zaznamenáme nově vybrané ohniště
+        return [chosen]
+
+    def generate_chest_positions(self, player_x, player_y, chest_count=1):
+        candidates = []
+
+        for y in range(1, self.height-1):
+            for x in range(1, self.width-1):
+                if self.grid[y][x] != "." or (x, y) == (player_x, player_y):
+                    continue
+
+                # kontrola sousedů
+                neighbors = [
+                    (x + dx, y + dy)
+                    for dx, dy in [(-1,0),(1,0),(0,-1),(0,1)]
+                    if 0 <= x+dx < self.width and 0 <= y+dy < self.height
+                ]
+                free_neighbors = sum(1 for nx, ny in neighbors if self.grid[ny][nx] == ".")
+                
+                if free_neighbors == 1:  # jen jedna cesta ven => slepá ulička
+                    candidates.append((x, y))
+
+        if not candidates:  # fallback: jen kdekoliv
+            candidates = [(x, y) for y in range(self.height) for x in range(self.width) if self.grid[y][x] == "." and (x,y)!=(player_x, player_y)]
+
+        chosen = random.sample(candidates, min(chest_count, len(candidates)))
+        return chosen
+
+    #test na mapu
+    def print_full_map(self):
+        for y in range(self.height):
+            row = ""
+            for x in range(self.width):
+                row += self.grid[y][x] + " "  # přidáme mezeru mezi políčka
+            print(row)
 
     def generate_objects(self, bonefire_count, chest_count, player_x, player_y, door_count=1):
-        for _ in range(bonefire_count):
-            while True:
-                x = random.randint(0, self.width - 1)
-                y = random.randint(0, self.height - 1)
-                if self.grid[y][x] == "." and (x, y) != (player_x, player_y):
-                    self.place_bonefire(x, y)
-                    break
+        existing_fires = []
 
-        for _ in range(chest_count):
-            while True:
-                x = random.randint(0, self.width - 1)
-                y = random.randint(0, self.height - 1)
-                if self.grid[y][x] == "." and (x, y) != (player_x, player_y):
-                    self.place_chest(x, y)
-                    break
+        for x, y in self.generate_chest_positions(player_x, player_y, chest_count=chest_count):
+            self.place_chest(x, y)
+            self.place_chest_guard(x, y)
+
+        for _ in range(bonefire_count):
+            for x, y in self.generate_bonefire_positions(player_x, player_y, existing_fires=existing_fires, min_distance=3):
+                self.place_bonefire(x, y)
 
         for _ in range(door_count):
             while True:
                 x, y = self.find_best_door_position(player_x, player_y)
                 self.place_door(x, y)
-                self.place_door_guards(x, y, count=3, radius=3)
+                self.place_door_guards(x, y)
                 break
 
     def generate_enemies(self, count, player_x, player_y):
@@ -175,24 +246,59 @@ class GameMap:
                 if (x, y) != (player_x, player_y) and self.grid[y][x] == ".":
                     self.place_enemy(x, y)
                     break
+    
+    def place_chest_guard(self, chest_x, chest_y):
+        neighbors = [
+            (chest_x + dx, chest_y + dy)
+            for dx, dy in [(-1,0), (1,0), (0,-1), (0,1)]
+            if 0 <= chest_x + dx < self.width and 0 <= chest_y + dy < self.height
+        ]
+        random.shuffle(neighbors)
 
-    def place_door_guards(self, door_x, door_y, count=2, radius=3):
-        possible_positions = []
+        for nx, ny in neighbors:
+            if self.grid[ny][nx] == ".":
+                self.place_enemy(nx, ny)
+                return
 
-        for y in range(door_y - radius, door_y + radius + 1):
-            for x in range(door_x - radius, door_x + radius + 1):
+    def place_door_guards(self, door_x, door_y, first_wave_count=2, second_wave_count=2):
+        # BFS vzdálenosti od dveří
+        distances = [[None for _ in range(self.width)] for _ in range(self.height)]
+        distances[door_y][door_x] = 0
+        queue = deque([(door_x, door_y)])
 
-                if 0 <= x < self.width and 0 <= y < self.height:
-                    if self.grid[y][x] == ".":
-                        # nechceme úplně u dveří (optional)
-                        dist = abs(x - door_x) + abs(y - door_y)
-                        if dist >= 1:
-                            possible_positions.append((x, y))
+        while queue:
+            x, y = queue.popleft()
+            for dx, dy in [(-1,0),(1,0),(0,-1),(0,1)]:  # sousední políčka
+                nx, ny = x+dx, y+dy
+                if 0 <= nx < self.width and 0 <= ny < self.height:
+                    if self.grid[ny][nx] == "." and distances[ny][nx] is None:
+                        distances[ny][nx] = distances[y][x] + 1
+                        queue.append((nx, ny))
 
-        random.shuffle(possible_positions)
+        # Seznam dostupných políček (x, y, vzdálenost)
+        available_positions = [(x, y, distances[y][x]) for y in range(self.height)
+                            for x in range(self.width) if distances[y][x] is not None and distances[y][x] > 0]
 
-        for i in range(min(count, len(possible_positions))):
-            x, y = possible_positions[i]
+        if not available_positions:
+            return  # není kam umístit
+
+        # --- První vlna ---
+        first_wave_candidates = [pos for pos in available_positions if 1 <= pos[2] <= 3]
+        random.shuffle(first_wave_candidates)
+        first_wave = first_wave_candidates[:first_wave_count]
+
+        for x, y, _ in first_wave:
+            self.place_enemy(x, y)
+
+        # --- Druhá vlna ---
+        blocked_positions = {(x, y) for x, y, _ in first_wave}
+        max_first_distance = max(pos[2] for pos in first_wave) if first_wave else 0
+        second_wave_candidates = [pos for pos in available_positions
+                                if (pos[0], pos[1]) not in blocked_positions and pos[2] > max_first_distance]
+        random.shuffle(second_wave_candidates)
+        second_wave = second_wave_candidates[:second_wave_count]
+
+        for x, y, _ in second_wave:
             self.place_enemy(x, y)
 
     def is_corridor_tile(self, x, y):
@@ -233,7 +339,6 @@ class GameMap:
                     game_map.explored[y][x] = True
                 else:
                     game_map.visible[y][x] = False
-
     def draw_map(game_map, px, py):
         for y in range(game_map.height):
             for x in range(game_map.width):
@@ -266,17 +371,13 @@ class GameMap:
     def next_level(player):
         global game_map, player_x, player_y
 
-        # zvýšení levelu hráče (může se použít pro scaling nepřátel)
         player.dungeon_level += 1
 
-        # vytvoření nové mapy
         game_map = GameMap(24, 20)
         rooms = game_map.generate_dungeon()
 
-        # reset pozice hráče do prvního pokoje
         player_x, player_y = rooms[0].center()
 
-        # generování nepřátel a objektů (můžeme scale podle levelu)
         game_map.generate_enemies_in_corridors(
             3 + player.dungeon_level, player_x, player_y)
         game_map.generate_objects(2, 2, player_x, player_y, door_count=1)
@@ -464,11 +565,18 @@ def show_inventory(player):
             added_items = set()
             for slot, items in player.slots.items():
                 for eq in items:
-                    if eq and id(eq) not in added_items:
+                    if not eq:
+                        continue
+
+                    # dvouruční item – zobraz jen jednou
+                    if eq.two_handed:
+                        if id(eq) in added_items:
+                            continue
                         added_items.add(id(eq))
-                        deck_exists = True
-                        print(f"\n--- {eq.name} ---")
-                        core.print_cards(eq.cards)
+
+                    deck_exists = True
+                    print(f"\n--- {eq.name} ---")
+                    core.print_cards(eq.cards)
 
             equipment_names = [item.name for slot in player.slots.values()
                                for item in slot if item]
@@ -677,6 +785,7 @@ class Character:
         self.hand = []
         self.discard = []
 
+
     def build_deck(self):
         self.deck = []
 
@@ -684,17 +793,25 @@ class Character:
 
         for slot_list in self.slots.values():
             for item in slot_list:
-                if item and id(item) not in added_items:
-                    self.deck.extend(item.cards)
+                if not item:
+                    continue
+
+                # dvouruční item – přidej jen jednou
+                if item.two_handed:
+                    if id(item) in added_items:
+                        continue
                     added_items.add(id(item))
 
+                # normální itemy se přidají vždy
+                self.deck.extend(item.cards)
+
+        # --- SYNERGIE ---
         equipment_names = [item.name for slot in self.slots.values()
-                           for item in slot if item]
+                        for item in slot if item]
 
         for synergy in core.SYNERGIES:
             if all(req in equipment_names for req in synergy["requires"]):
-                for card in synergy["cards"]:
-                    self.deck.append(card)
+                self.deck.extend(synergy["cards"])
 
         random.shuffle(self.deck)
 
@@ -827,21 +944,26 @@ class Character:
         print("\nTvoje karty:")
         core.print_cards(player.hand)
 
-    def player_turn(player, enemies):
-        energy = 2
+    def has_playable_card(self):
+        for card in player.hand:
+            if card.cost <= self.energy:
+                return True
+        return False
 
-        while energy > 0 and player.hand:
+    def player_turn(player, enemies):
+        player.energy = 2
+
+        while player.hand and player.has_playable_card():
             clear_screen()
 
             print(f"\n{Colors.GREEN}--- Tvůj tah ---{Colors.RESET}")
-            print(
-                f"{player.name} (HP: {player.hp}, {Colors.GRAY}Block:{player.block}{Colors.RESET}, Energy: {energy}, temporary_strenght: {player.temporary_strenght})")
+            print(f"- {player.name} (HP: {player.hp}, {Colors.GRAY}Block: {player.block}{Colors.RESET}, Energy: {player.energy}){format_status_effects(player)}")
 
             print("\nNepřátelé:")
-            for i, e in enumerate(enemies):
+            for e in enemies:
                 if e.hp > 0:
-                    print(f"{i}: {e.name} (HP: {e.hp}, {Colors.GRAY}Block: {e.block}{Colors.RESET})")
-
+                    print(f"- {e.name} (HP: {e.hp}, {Colors.GRAY}Block: {e.block}{Colors.RESET}){format_status_effects(e)}")
+            
             player.show_hand()
 
             print("\n(ENTER = ukončit tah)")
@@ -864,7 +986,7 @@ class Character:
 
             card = player.hand[index]
 
-            if card.cost > energy:
+            if card.cost > player.energy:
                 print("Nedostatek energie")
                 input("ENTER...")
                 continue
@@ -884,7 +1006,7 @@ class Character:
                 player.hand.pop(index)
                 player.discard.append(card)
 
-            energy -= card.cost
+            player.energy -= card.cost
 
             # ===== KONTROLY =====
             if all(e.hp <= 0 for e in enemies):
@@ -893,7 +1015,7 @@ class Character:
             if player.hp <= 0:
                 return "player_dead"
 
-            print(f"\nZbývá energie: {energy}")
+            print(f"\nZbývá energie: {player.energy}")
 
             input("\nENTER pro pokračování...")
 
@@ -959,6 +1081,15 @@ class Colors:
     GRAY = "\033[90m"
     RESET = "\033[0m"
 
+def format_status_effects(character):
+    if not character.status_effects:
+        return ""
+
+    effects = []
+    for effect in character.status_effects:
+        effects.append(f"{effect.name}({effect.duration})")
+
+    return " | " + ", ".join(effects)
 
 def combat(player, enemies):
     player.reset_combat()
@@ -975,11 +1106,12 @@ def combat(player, enemies):
         clear_screen()
         print("\n--- Nové kolo ---")
         player.block = 0
-        print(f"- {player.name} (HP: {player.hp}, {Colors.GRAY}Block: {player.block}{Colors.RESET})")
+        print(f"- {player.name} (HP: {player.hp}, {Colors.GRAY}Block: {player.block}{Colors.RESET}, Energy: {player.energy}){format_status_effects(player)}")
         print("\nNepřátelé:")
         for e in enemies:
             if e.hp > 0:
-                print(f"- {e.name} (HP: {e.hp}, {Colors.GRAY}Block: {e.block}{Colors.RESET})")
+                print(f"- {e.name} (HP: {e.hp}, {Colors.GRAY}Block: {e.block}{Colors.RESET})"
+                    f"{format_status_effects(e)}")
         print()
 
         # ===== PLAYER =====
@@ -1013,65 +1145,79 @@ def combat(player, enemies):
                 return False
         clear_screen()
         print(f"\n{Colors.RED}--- Nepřátelský tah ---{Colors.RESET}")
-        print(f"- {player.name} (HP: {player.hp}, Block: {player.block})")
+        print(f"- {player.name} (HP: {player.hp}, {Colors.GRAY}Block: {player.block}{Colors.RESET}, Energy: {player.energy}){format_status_effects(player)}")
         print("\nNepřátelé:")
         for e in enemies:
             if e.hp > 0:
-                print(f"- {e.name} (HP: {e.hp}, Block: {e.block})")
+                print(f"- {e.name} (HP: {e.hp}, {Colors.GRAY}Block: {e.block}{Colors.RESET}){format_status_effects(e)}")
         player.show_hand()
 
         # ===== ENEMY =====
         print("\n--- Nepřátelé hrají ---\n")
+
         for enemy in enemies:
             enemy.block = 0
-        for enemy in enemies:
+
+        for enemy in enemies[:]:
             if enemy.hp <= 0:
                 continue
 
+            # Zpracování stunu
             if enemy.is_stunned():
                 print(f"{Colors.YELLOW}{enemy.name} je omráčen!{Colors.RESET}")
                 enemy.process_status()
+                if enemy.hp <= 0:
+                    continue
                 continue
 
             enemy.process_status()
-            # potřeba kotrolovat zda nepřítel neumřel
             if enemy.hp <= 0:
-                return True
-
+                continue
+            
             enemy.draw(1)
 
             if enemy.hand:
-                enemy.play_card(0, target=player, enemies_list=enemies,
-                                create_enemy_func=create_enemy_by_name)
+                enemy.play_card(
+                    0,
+                    target=player,
+                    enemies_list=enemies,
+                    create_enemy_func=create_enemy_by_name
+                )
 
             if player.hp <= 0:
                 print("Prohrál jsi!")
                 input("ENTER pro pokračování...")
                 return False
+            
+        if all(enemy.hp <= 0 for enemy in enemies):
+                print("Vyhrál jsi!")
+                input("ENTER pro pokračování...")
+                return True
 
         input("Stiskni cokoliv pro vstup do dalšího kola:")
-
 
 # ===== MAIN LOOP ========
 player = Character("Hráč", 20)
 player.dungeon_level = 1
 player.fetigue = 0
-player.equip_item(gear.shield)
-player.equip_item(gear.sword)
-player.equip_item(gear.poisoners_ring)
+player.energy = 2
+player.equip_item(gear.mace)
 player.equip_item(gear.leather_armor)
+player.equip_item(gear.poisoners_ring)
 
 game_map = GameMap(24, 20)
 rooms = game_map.generate_dungeon()
 player_x, player_y = rooms[0].center()
-game_map.generate_enemies_in_corridors(4, player_x, player_y)
 game_map.generate_objects(2, 2, player_x, player_y,)
+game_map.generate_enemies_in_corridors(3, player_x, player_y)
+
 
 while player.hp > 0:
     clear_screen()
 
     GameMap.update_visibility(game_map, player_x, player_y)
     GameMap.draw_map(game_map, player_x, player_y)
+    #game_map.print_full_map()    -pouze při testování generování map
 
     print(f"\nHP: {player.hp}, Dungeon lvl: {player.dungeon_level}")
 
