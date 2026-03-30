@@ -11,13 +11,16 @@ class Colors:
 
 
 class Ability:
-    def __init__(self, name, description, ability_type, active=True, effect=None, cards=None):
+    def __init__(self, name, description, ability_type, active=True, effect=None, trigger="passive", cards=None):
         self.name = name
         self.description = description
         self.type = ability_type  # "card" / "passive"
         self.effect = effect
+        # "per_turn", "on_acquire", "manual", "start_of_combat", "on_attack_played"
+        self.trigger = trigger
         self.active = active
         self.cards = cards or []
+        self.used = False
 
     def apply(self, player):
         if self.effect:
@@ -27,12 +30,13 @@ class Ability:
 
 
 class Card:
-    def __init__(self, name, damage=0, block=0, effect=None, effect_chance=1.0,
+    def __init__(self, name, damage=0, block=0, energy=0, effect=None, effect_chance=1.0,
                  effect_on_damage=False, lifesteal=0, target_type="enemy",
                  spawn_enemy=None, spawn_count=0, draw=0, discard=0, buff_strenght=0, cost=1):
         self.name = name
         self.damage = damage
         self.block = block
+        self.energy = energy
         self.effect = effect
         self.effect_chance = effect_chance
         self.effect_on_damage = effect_on_damage
@@ -50,10 +54,15 @@ class Card:
 
         dmg_done = 0
         if getattr(self, "damage", 0) > 0:
+            user.attack_cards_played += 1
             total_damage = self.damage + \
                 getattr(user, "strenght", 0) + \
                 getattr(user, "temporary_strenght", 0)
             dmg_done = target.take_damage(total_damage)
+
+            for ability in user.abilities:
+                if ability.type == "passive" and ability.trigger == "on_attack_played" and ability.active:
+                    ability.effect(user)
 
         if self.spawn_enemy and enemies_list is not None and create_enemy_func is not None:
             for _ in range(self.spawn_count):
@@ -64,6 +73,9 @@ class Card:
 
         if self.block:
             user.add_block(self.block)
+
+        if self.energy:
+            user.energy += self.energy
 
         if self.buff_strenght:
             user.add_temporary_strenght(self.buff_strenght)

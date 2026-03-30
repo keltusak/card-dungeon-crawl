@@ -104,15 +104,16 @@ reflexis = Equipment("Reflexy", "pocket", [
 ])
 
 small_fangs = Equipment("Malé chelicery", "hand", [
-    Card("Kousnutí",damage=2, effect=Poison(1,3),effect_on_damage=True),
-    Card("Kousnutí",damage=2, effect=Poison(1,3),effect_on_damage=True),
+    Card("Kousnutí", damage=2, effect=Poison(1, 3), effect_on_damage=True),
+    Card("Kousnutí", damage=2, effect=Poison(1, 3), effect_on_damage=True),
 ])
 
 
 fangs = Equipment("Chelicery", "hand", [
-    Card("Kousnutí",damage=4, effect=Poison(2,4),effect_on_damage=True),
-    Card("Kousnutí",damage=4, effect=Poison(2,4),effect_on_damage=True),
-    Card("Paralizující kousnutí",damage=3, effect=Stun(1),effect_chance=0.4, effect_on_damage=True),
+    Card("Kousnutí", damage=4, effect=Poison(2, 4), effect_on_damage=True),
+    Card("Kousnutí", damage=4, effect=Poison(2, 4), effect_on_damage=True),
+    Card("Paralizující kousnutí", damage=3, effect=Stun(
+        1), effect_chance=0.4, effect_on_damage=True),
 ])
 
 exoskelet = Equipment("Exoskelet", "body", [
@@ -125,6 +126,12 @@ spiders_cocon = Equipment("Kokon", "belt", [
          spawn_count=1, target_type="self")
 ])
 
+jaw = Equipment("Morda", "hand", [
+    Card("Kousnutí", damage=5),
+    Card("Kousnutí", damage=5),
+    Card("Řev", damage=3, buff_strenght=1),
+    Card("Zuřivost", buff_strenght=2),
+])
 
 
 # ===== Pomocné karty =====

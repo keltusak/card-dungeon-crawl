@@ -256,6 +256,7 @@ class GameMap:
 
         # 4) Teprve nyní umístíme guardy
         for x, y in door_positions:
+            pass
             self.place_door_guards(x, y)
 
         for x, y in chest_positions:
@@ -448,7 +449,7 @@ class GameMap:
         player_x, player_y = rooms[0].center()
 
         game_map.generate_enemies_in_corridors(
-            3 + player.dungeon_level, player_x, player_y)
+            2 + player.dungeon_level, player_x, player_y)
         game_map.generate_objects(2, 2, player_x, player_y, door_count=1)
 
     @staticmethod
@@ -478,7 +479,8 @@ class GameMap:
         elif tile == "▣":
             loot_options = [gear.ring_of_defense, gear.abakus, gear.madmans_eye, gear.war_paints,
                             gear.wurm_ring, gear.poisoners_ring, gear.ring_with_needle, gear.dagger,
-                            gear.shield_with_spike, gear.caltrops, gear.flail, gear.rabits_paw]
+                            gear.shield_with_spike, gear.caltrops, gear.flail, gear.rabits_paw, gear.battle_axe,
+                            gear.mace]
             loot = random.choice(loot_options)
             player.inventory.append(loot)
             messages.append(f"Otevřel jsi truhlu a našel: {loot.name}")
@@ -669,8 +671,9 @@ def show_inventory(player):
             if active_card_abilities:
                 print("\n\033[96m--- Karty schopností ---\033[0m")
                 for ability in active_card_abilities:
-                    print(f"\n{ability.name}: {ability.description}")
+                    print(f"{ability.name}: {ability.description}")
                     core.print_cards(ability.cards)
+                    print()
                     deck_exists = True
 
             if not deck_exists:
@@ -723,12 +726,16 @@ def get_random_abilities(all_abilities, count=3):
 def level_up(self):
     self.max_hp += 5
     self.hp += 5
+    self.lvl += 1
 
     all_abilities = [
         abilities.power_strike,
         abilities.fast_strike,
         abilities.defensive_strike,
-        abilities.muscles
+        abilities.no_rest,
+        abilities.muscles,
+        abilities.hard_root,
+        abilities.three_attack_draw,
     ]
 
     choices = get_random_abilities(all_abilities, 3)
@@ -842,6 +849,10 @@ def create_enemy_by_name(name):
             "hp": 16,
             "equipment": [gear.fangs, gear.exoskelet, gear.spiders_cocon],
         },
+        "Černý medvěd": {
+            "hp": 20,
+            "equipment": [gear.jaw],
+        },
     }
 
     template = enemy_types[name]
@@ -857,8 +868,8 @@ def create_enemy_by_name(name):
 def create_enemy_group(dungeon_level=1):
     encounter_types = [
         {"type": "komáři", "enemies": [
-            ("Obří komár", 1, 3)], "levels": [1, 2]},
-        {"type": "goblini", "enemies": [("Goblin", 1, 2)], "levels": [1, 2]},
+            ("Obří komár", 2, 3)], "levels": [1, 2]},
+        {"type": "goblini", "enemies": [("Goblin", 1, 2)], "levels": [1]},
         {"type": "strážci", "enemies": [("Strážce", 1, 2)], "levels": [1, 2]},
         {"type": "vrazi", "enemies": [("Vrah", 1, 2)], "levels": [1, 2, 3]},
         {"type": "mravenci", "enemies": [
@@ -867,11 +878,13 @@ def create_enemy_group(dungeon_level=1):
         {"type": "gobliní průzkumník", "enemies": [
             ("Goblinní zvěd", 1, 1)], "levels": [2, 3]},
         {"type": "gobliní hlídka", "enemies": [
-            ("Goblinní válečník", 1, 1), ("Goblin", 1, 1)], "levels": [2, 3]},
+            ("Goblinní válečník", 1, 1), ("Goblin", 1, 1)], "levels": [2, 4]},
         {"type": "gobliní stráž", "enemies": [
-            ("Goblinní válečník", 1, 1), ("Goblinní zvěd", 1, 1)], "levels": [2, 3]},
-        {"type": "Lovící pavouk", "enemies": [
-            ("Pavouk s vejcem", 1, 1)], "levels": [3]},
+            ("Goblinní válečník", 1, 1), ("Goblinní zvěd", 1, 1)], "levels": [2, 4]},
+        {"type": "lovící pavouk", "enemies": [
+            ("Pavouk s vejcem", 1, 1)], "levels": [3, 4]},
+        {"type": "zuřivý medvěd", "enemies": [
+            ("Černý medvěd", 1, 1)], "levels": [3, 4]},
     ]
 
     possible_encounters = [
@@ -925,6 +938,9 @@ class Character:
         self.block = 0
         self.abilities = []
         self.status_effects = []
+
+        # pomocné proměnné pro ability
+        self.attack_cards_played = 0
 
         self.slots = {
             "hand": [None, None],
@@ -1121,13 +1137,22 @@ class Character:
             clear_screen()
 
             print(f"\n{Colors.GREEN}--- Tvůj tah ---{Colors.RESET}")
-            print(f"- {player.name} (HP: {player.hp}, {Colors.GRAY}Block: {player.block}{Colors.RESET}, Energy: {player.energy}){format_status_effects(player)}")
+            print(
+                f"- {player.name} (HP: {player.hp}, {Colors.GRAY}Block: {player.block}{Colors.RESET}, Energy: {player.energy}"
+                + (f", Total_strenght: {player.strenght + player.temporary_strenght}"
+                   if (player.strenght + player.temporary_strenght) != 0 else "")
+                + f"){format_status_effects(player)}"
+            )
 
             print("\nNepřátelé:")
             for e in enemies:
                 if e.hp > 0:
                     print(
-                        f"- {e.name} (HP: {e.hp}, {Colors.GRAY}Block: {e.block}{Colors.RESET}){format_status_effects(e)}")
+                        f"- {e.name} (HP: {e.hp}, {Colors.GRAY}Block: {e.block}{Colors.RESET}"
+                        + (f", Total_strenght: {e.strenght + e.temporary_strenght}"
+                           if (e.strenght + e.temporary_strenght) != 0 else "")
+                        + f"){format_status_effects(e)}"
+                    )
 
             player.show_hand()
 
@@ -1276,12 +1301,24 @@ def combat(player, enemies):
         clear_screen()
         print("\n--- Nové kolo ---")
         player.block = 0
-        print(f"- {player.name} (HP: {player.hp}, {Colors.GRAY}Block: {player.block}{Colors.RESET}, Energy: {player.energy}){format_status_effects(player)}")
+        for ability in player.abilities:
+            if ability.type == "passive" and ability.trigger == "per_turn" and ability.active:
+                ability.effect(player)
+        print(
+            f"- {player.name} (HP: {player.hp}, {Colors.GRAY}Block: {player.block}{Colors.RESET}, Energy: {player.energy}"
+            + (f", Total_strenght: {player.strenght + player.temporary_strenght}"
+               if (player.strenght + player.temporary_strenght) != 0 else "")
+            + f"){format_status_effects(player)}"
+        )
         print("\nNepřátelé:")
         for e in enemies:
             if e.hp > 0:
-                print(f"- {e.name} (HP: {e.hp}, {Colors.GRAY}Block: {e.block}{Colors.RESET})"
-                      f"{format_status_effects(e)}")
+                print(
+                    f"- {e.name} (HP: {e.hp}, {Colors.GRAY}Block: {e.block}{Colors.RESET}"
+                    + (f", Total_strenght: {e.strenght + e.temporary_strenght}"
+                       if (e.strenght + e.temporary_strenght) != 0 else "")
+                    + f"){format_status_effects(e)}"
+                )
         print()
 
         # ===== PLAYER =====
@@ -1315,12 +1352,21 @@ def combat(player, enemies):
                 return False
         clear_screen()
         print(f"\n{Colors.RED}--- Nepřátelský tah ---{Colors.RESET}")
-        print(f"- {player.name} (HP: {player.hp}, {Colors.GRAY}Block: {player.block}{Colors.RESET}, Energy: {player.energy}){format_status_effects(player)}")
+        print(
+            f"- {player.name} (HP: {player.hp}, {Colors.GRAY}Block: {player.block}{Colors.RESET}, Energy: {player.energy}"
+            + (f", Total_strenght: {player.strenght + player.temporary_strenght}"
+               if (player.strenght + player.temporary_strenght) != 0 else "")
+            + f"){format_status_effects(player)}"
+        )
         print("\nNepřátelé:")
         for e in enemies:
             if e.hp > 0:
                 print(
-                    f"- {e.name} (HP: {e.hp}, {Colors.GRAY}Block: {e.block}{Colors.RESET}){format_status_effects(e)}")
+                    f"- {e.name} (HP: {e.hp}, {Colors.GRAY}Block: {e.block}{Colors.RESET}"
+                    + (f", Total_strenght: {e.strenght + e.temporary_strenght}"
+                       if (e.strenght + e.temporary_strenght) != 0 else "")
+                    + f"){format_status_effects(e)}"
+                )
         player.show_hand()
 
         # ===== ENEMY =====
@@ -1380,7 +1426,6 @@ player.equip_item(gear.sword)
 player.equip_item(gear.shield)
 player.equip_item(gear.leather_armor)
 
-
 game_map = GameMap(24, 20)
 rooms = game_map.generate_dungeon()
 player_x, player_y = rooms[0].center()
@@ -1396,7 +1441,7 @@ while player.hp > 0:
     # game_map.print_full_map()  # pouze při testování generování map
 
     print(
-        f"\nHP: {player.hp}, XP: {player.xp}, LVL: {player.lvl}, Dungeon lvl: {player.dungeon_level}")
+        f"\nHP: {player.hp}/{player.max_hp}, XP: {player.xp}, LVL: {player.lvl}, Dungeon lvl: {player.dungeon_level}")
 
     cmd = input("\nPohyb (WASD, q = konec, i = inventář, h = help): ").lower()
 
