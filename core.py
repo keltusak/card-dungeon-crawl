@@ -10,6 +10,22 @@ class Colors:
     RESET = "\033[0m"
 
 
+class Ability:
+    def __init__(self, name, description, ability_type, active=True, effect=None, cards=None):
+        self.name = name
+        self.description = description
+        self.type = ability_type  # "card" / "passive"
+        self.effect = effect
+        self.active = active
+        self.cards = cards or []
+
+    def apply(self, player):
+        if self.effect:
+            self.effect(player)
+
+        player.abilities.append(self)
+
+
 class Card:
     def __init__(self, name, damage=0, block=0, effect=None, effect_chance=1.0,
                  effect_on_damage=False, lifesteal=0, target_type="enemy",
@@ -205,7 +221,7 @@ def print_cards(cards):
             parts.append(f"DISCARD:{card.discard}")
         if getattr(card, "target_type", None) == "all_enemies":
             parts.append("AOE")
-        #cenu asi vypsat vždy zatím
+        # cenu asi vypsat vždy zatím
         parts.append(f"COST:{card.cost}")
 
         stats = ", ".join(parts)
@@ -240,7 +256,8 @@ SYNERGIES = [
     {
         "requires": ["Prstenočerv", "Mravenec"],
         "cards": [
-            Card("Požehnání malých", effect=Dodge(0.3, 3), target_type="self") # potom vylepšit
+            Card("Požehnání malých", effect=Dodge(0.3, 3),
+                 target_type="self")  # potom vylepšit
         ]
     },
 ]
