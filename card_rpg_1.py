@@ -458,6 +458,7 @@ class GameMap:
 
             if survived:
                 game_map.grid[y][x] = "."
+                status = "enemy_dead"
             else:
                 status = "player_dead"
 
@@ -664,6 +665,8 @@ def show_inventory(player):
         else:
             print("Neplatná volba!")
 
+def level_up(self):
+    pass
 
 def get_valid_index(prompt, max_value):
     while True:
@@ -870,6 +873,12 @@ class Character:
                 self.deck.extend(synergy["cards"])
 
         random.shuffle(self.deck)
+
+    def is_level_up(self):
+        if self.xp >= self.lvl*5:
+            self.xp = self.xp - self.lvl*5
+            return True
+        return False
 
     def draw(self, n=3):
         for _ in range(n):
@@ -1155,6 +1164,9 @@ def combat(player, enemies):
 
     first_turn = True
 
+    global combat_xp
+    combat_xp=1+player.dungeon_level
+
     while player.hp > 0 and any(e.hp > 0 for e in enemies):
         clear_screen()
         print("\n--- Nové kolo ---")
@@ -1254,6 +1266,8 @@ player = Character("Hráč", 20)
 player.dungeon_level = 1
 player.fatigue = 0
 player.energy = 2
+player.xp = 0
+player.lvl = 1
 player.equip_item(gear.mace)
 player.equip_item(gear.leather_armor)
 player.equip_item(gear.poisoners_ring)
@@ -1272,7 +1286,7 @@ while player.hp > 0:
     GameMap.draw_map(game_map, player_x, player_y)
     game_map.print_full_map()    #pouze při testování generování map
 
-    print(f"\nHP: {player.hp}, Dungeon lvl: {player.dungeon_level}")
+    print(f"\nHP: {player.hp}, XP: {player.xp}, Dungeon lvl: {player.dungeon_level}")
 
     cmd = input("\nPohyb (WASD, q = konec, i = inventář, h = help): ").lower()
 
@@ -1298,6 +1312,8 @@ while player.hp > 0:
 
     status, messages = GameMap.handle_tile(
         game_map, player_x, player_y, player, combat)
+    
+
 
     for msg in messages:
         print(msg)
@@ -1308,3 +1324,9 @@ while player.hp > 0:
         print("Konec hry")
         input("ENTER pro pokračování...")
         break
+
+    if status == "enemy_dead":
+        player.xp += combat_xp
+        if player.is_level_up():
+            print("Získáváš nový level")
+            level_up(player)
