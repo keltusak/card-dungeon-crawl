@@ -113,7 +113,7 @@ fangs = Equipment("Chelicery", "hand", [
     Card("Kousnutí", damage=4, effect=Poison(2, 4), effect_on_damage=True),
     Card("Kousnutí", damage=4, effect=Poison(2, 4), effect_on_damage=True),
     Card("Paralizující kousnutí", damage=3, effect=Stun(
-        1), effect_chance=0.4, effect_on_damage=True),
+        1), effect_chance=0.6, effect_on_damage=True),
 ])
 
 exoskelet = Equipment("Exoskelet", "body", [

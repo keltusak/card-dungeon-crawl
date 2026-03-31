@@ -819,7 +819,8 @@ def create_enemy_by_name(name):
         },
         "Strážce": {
             "hp": 15,
-            "equipment": [gear.broken_sword, gear.shield]
+            "equipment": [gear.broken_sword, gear.shield],
+            "abilities": [abilities.maintaining_defense]
         },
         "Obří komár": {
             "hp": 5,
@@ -861,6 +862,9 @@ def create_enemy_by_name(name):
     for item in template["equipment"]:
         enemy.equip_item(item, suppress_print=True)
     enemy.build_deck()
+
+    for ability in template.get("abilities", []):
+        ability.apply(enemy)
 
     return enemy
 
@@ -934,6 +938,7 @@ class Character:
         self.hp = hp
         self.strenght = strenght
         self.temporary_strenght = temporary_strenght
+        self.saved_block = 0
 
         self.block = 0
         self.abilities = []
@@ -1104,6 +1109,7 @@ class Character:
         self.block = 0
         self.temporary_strenght = 0
         self.fatigue = 0
+        self.attack_cards_played = 0
 
     def add_block(self, amount):
         self.block += amount
@@ -1373,7 +1379,17 @@ def combat(player, enemies):
         print("\n--- Nepřátelé hrají ---\n")
 
         for enemy in enemies:
+            enemy.saved_block = 0
+
+        for ability in enemy.abilities:
+            if ability.type == "passive" and ability.trigger == "per_turn" and ability.active:
+                ability.effect(enemy)
+
+        for enemy in enemies:
             enemy.block = 0
+
+        for enemy in enemies:
+            enemy.block += enemy.saved_block
 
         for enemy in enemies[:]:
             if enemy.hp <= 0:
