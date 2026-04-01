@@ -51,13 +51,6 @@ poison_dagger = Equipment("Otrávená dýka", "hand", [
     Card("Bodnutí", damage=3)
 ])
 
-proboscis = Equipment("Sosák", "hand", [
-    Card("Píchnutí", damage=2),
-    Card("Sátí krve", damage=2, lifesteal=1),
-    Card("Sátí krve", damage=2, lifesteal=1),
-    Card("Hladové sátí", damage=3, lifesteal=1.5)
-])
-
 # ===== Štíty =====
 
 shield = Equipment("Štít", "hand", [
@@ -73,12 +66,19 @@ shield_with_spike = Equipment("Štít s bodcem", "hand", [
 
 # ===== Zbroje =====
 
-leather_armor = Equipment("Kožená zbroj", "body", [
+leather_armor = Equipment("Vycpávaná zbroj", "body", [
     Card("Pokrytí", block=2, target_type="self"),
     Card("Pokrytí", block=2, target_type="self"),
 ])
 
 # ===== Monstra =====
+proboscis = Equipment("Sosák", "hand", [
+    Card("Píchnutí", damage=2),
+    Card("Sátí krve", damage=2, lifesteal=1),
+    Card("Sátí krve", damage=2, lifesteal=1),
+    Card("Hladové sátí", damage=3, lifesteal=1.5)
+])
+
 
 wings = Equipment("Hmyzí křídla", "body", [
     Card("Poletování", effect=Dodge(0.5, 2), target_type="self"),
@@ -117,8 +117,8 @@ fangs = Equipment("Chelicery", "hand", [
 ])
 
 exoskelet = Equipment("Exoskelet", "body", [
-    Card("Pokrytí", block=3, target_type="self"),
-    Card("Pokrytí", block=4, target_type="self"),
+    Card("Pokrytí", block=5, target_type="self"),
+    Card("Pokrytí", block=5, target_type="self"),
 ])
 
 spiders_cocon = Equipment("Kokon", "belt", [
@@ -131,8 +131,13 @@ jaw = Equipment("Morda", "hand", [
     Card("Kousnutí", damage=5),
     Card("Řev", damage=3, buff_strenght=1),
     Card("Zuřivost", buff_strenght=2),
+    Card("Povalení", damage=3, reduce_energy=1),
 ])
 
+hide = Equipment("Medvědí kůže", "body", [
+    Card("Srst", block=4, target_type="self"),
+    Card("Srst", block=4, target_type="self"),
+])
 
 # ===== Pomocné karty =====
 

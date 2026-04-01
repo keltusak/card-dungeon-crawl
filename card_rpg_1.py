@@ -473,7 +473,7 @@ class GameMap:
             heal_amount = 5
             player.hp = min(player.max_hp, player.hp + heal_amount)
             messages.append(
-                f"Bonefire: doplnil jsi {heal_amount} HP (HP: {player.hp})")
+                f"Ohniště: odpočinul sis u ohniště a doplnil {heal_amount} HP (HP: {player.hp}/{player.max_hp})")
             game_map.grid[y][x] = "."
 
         elif tile == "▣":
@@ -736,14 +736,22 @@ def level_up(self):
         abilities.muscles,
         abilities.hard_root,
         abilities.three_attack_draw,
+        abilities.maintaining_defense
     ]
 
-    choices = get_random_abilities(all_abilities, 3)
+    owned_abilities = {ability.name for ability in self.abilities}
+
+    available_abilities = [
+        ability for ability in all_abilities
+        if ability.name not in owned_abilities
+    ]
+
+    choices = get_random_abilities(available_abilities, 3)
 
     while True:
         clear_screen()
         print("\n\033[94m=== DOSÁHL JSI NOVÉ ÚROVNĚ! ===\033[0m")
-        print("Tvé dosavadní maximalní zdraví se zvýšílo o 5:\n")
+        print("Tvé dosavadní maximalní zdraví se zvýšílo o 5.\n")
         print("Vyber si jednu schopnost:\n")
 
         for i, ability in enumerate(choices, 1):
@@ -802,29 +810,24 @@ def move_player(cmd, x, y, game_map):
         return new_x, new_y
 
 
-def create_enemy():
-    enemy_names = ["Goblin", "Vrah", "Strážce", "Obří komár"]
-    return create_enemy_by_name(random.choice(enemy_names))
-
-
 def create_enemy_by_name(name):
     enemy_types = {
         "Goblin": {
             "hp": 12,
-            "equipment": [gear.broken_sword]
+            "equipment": [gear.broken_sword],
         },
         "Vrah": {
             "hp": 10,
-            "equipment": [gear.poison_dagger]
+            "equipment": [gear.poison_dagger],
         },
         "Strážce": {
             "hp": 15,
             "equipment": [gear.broken_sword, gear.shield],
-            "abilities": [abilities.maintaining_defense]
+            "abilities": [abilities.maintaining_defense],
         },
         "Obří komár": {
             "hp": 5,
-            "equipment": [gear.proboscis, gear.wings]
+            "equipment": [gear.proboscis, gear.wings],
         },
         "Mraveniště": {
             "hp": 14,
@@ -836,11 +839,11 @@ def create_enemy_by_name(name):
         },
         "Goblinní zvěd": {
             "hp": 12,
-            "equipment": [gear.broken_sword, gear.horn, gear.reflexis]
+            "equipment": [gear.broken_sword, gear.horn, gear.reflexis],
         },
         "Goblinní válečník": {
             "hp": 16,
-            "equipment": [gear.sword, gear.shield, gear.war_paints]
+            "equipment": [gear.sword, gear.shield, gear.war_paints],
         },
         "Pavoučí mládě": {
             "hp": 7,
@@ -853,6 +856,7 @@ def create_enemy_by_name(name):
         "Černý medvěd": {
             "hp": 20,
             "equipment": [gear.jaw],
+            "actions": 2
         },
     }
 
@@ -865,6 +869,8 @@ def create_enemy_by_name(name):
 
     for ability in template.get("abilities", []):
         ability.apply(enemy)
+
+    enemy.actions = template.get("actions", 1)
 
     return enemy
 
@@ -1138,6 +1144,8 @@ class Character:
 
     def player_turn(player, enemies):
         player.energy = 2
+        player.energy -= player.reduced_energy
+        player.reduced_energy = 0
 
         while player.hand and player.has_playable_card():
             clear_screen()
@@ -1226,7 +1234,8 @@ class Character:
             if not effect.tick():
                 new_effects.append(effect)
             else:
-                print(f"{self.name} se zbavil efektu {effect.name}.")
+                if self.hp > 0:
+                    print(f"{self.name} se zbavil efektu {effect.name}.")
 
         self.status_effects = new_effects
 
@@ -1306,10 +1315,17 @@ def combat(player, enemies):
     while player.hp > 0 and any(e.hp > 0 for e in enemies):
         clear_screen()
         print("\n--- Nové kolo ---")
+
         player.block = 0
+
         for ability in player.abilities:
             if ability.type == "passive" and ability.trigger == "per_turn" and ability.active:
                 ability.effect(player)
+
+        player.block += player.saved_block
+
+        player.saved_block = 0
+
         print(
             f"- {player.name} (HP: {player.hp}, {Colors.GRAY}Block: {player.block}{Colors.RESET}, Energy: {player.energy}"
             + (f", Total_strenght: {player.strenght + player.temporary_strenght}"
@@ -1330,6 +1346,7 @@ def combat(player, enemies):
         # ===== PLAYER =====
         if player.is_stunned():
             print(f"{player.name} vynechává tah kvůli omráčení!")
+            input("ENTER pro pokračování...")
             player.process_status()
             if player.hp <= 0:
                 print("Prohrál jsi!")
@@ -1375,21 +1392,22 @@ def combat(player, enemies):
                 )
         player.show_hand()
 
-        # ===== ENEMY =====
-        print("\n--- Nepřátelé hrají ---\n")
-
-        for enemy in enemies:
-            enemy.saved_block = 0
-
         for ability in enemy.abilities:
-            if ability.type == "passive" and ability.trigger == "per_turn" and ability.active:
+            if ability.type == "passive" and ability.trigger == "after_opponent_turn" and ability.active:
                 ability.effect(enemy)
 
+        # ===== ENEMY =====
+        print("\n--- Nepřátelé hrají ---\n")
         for enemy in enemies:
             enemy.block = 0
 
+        # start of turn ability později
+
         for enemy in enemies:
             enemy.block += enemy.saved_block
+
+        for enemy in enemies:
+            enemy.saved_block = 0
 
         for enemy in enemies[:]:
             if enemy.hp <= 0:
@@ -1407,11 +1425,16 @@ def combat(player, enemies):
             if enemy.hp <= 0:
                 continue
 
-            enemy.draw(1)
+            enemy.draw(enemy.actions)  # lízne tolik karet, kolik může zahrát
 
-            if enemy.hand:
+            for _ in range(enemy.actions):
+                if not enemy.hand:
+                    break
+
+                index = random.randint(0, len(enemy.hand) - 1)
+
                 enemy.play_card(
-                    0,
+                    index,
                     target=player,
                     enemies_list=enemies,
                     create_enemy_func=create_enemy_by_name
@@ -1427,6 +1450,10 @@ def combat(player, enemies):
             input("ENTER pro pokračování...")
             return True
 
+        for ability in player.abilities:
+            if ability.trigger == "after_opponent_turn" and ability.active:
+                ability.effect(player)
+
         input("Stiskni cokoliv pro vstup do dalšího kola:")
 
 
@@ -1435,6 +1462,7 @@ player = Character("Hráč", 20)
 player.dungeon_level = 1
 player.fatigue = 0
 player.energy = 2
+player.reduced_energy = 0
 player.xp = 0
 player.lvl = 1
 player.abilities = []

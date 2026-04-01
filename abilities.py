@@ -78,12 +78,13 @@ three_attack_draw = Ability(
 )
 
 
-def keep_defense(enemy):
-    if enemy.block > 0:
-        enemy.saved_block = min(enemy.block, 2)
+def keep_defense(character):
+    if character.block > 0:
+        character.saved_block = min(character.block, 2)
     else:
-        enemy.saved_block = 0
-    return enemy.saved_block
+        character.saved_block = 0
+
+    return character.saved_block
 
 
 maintaining_defense = Ability(
@@ -91,5 +92,5 @@ maintaining_defense = Ability(
     description="Pokud při vstupu do dalšího kola máš nějaký block, nejvýše dva body se ti z něj zachvají.",
     ability_type="passive",
     effect=keep_defense,
-    trigger="per_turn"
+    trigger="after_opponent_turn"
 )

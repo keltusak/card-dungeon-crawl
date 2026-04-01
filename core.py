@@ -30,13 +30,14 @@ class Ability:
 
 
 class Card:
-    def __init__(self, name, damage=0, block=0, energy=0, effect=None, effect_chance=1.0,
+    def __init__(self, name, damage=0, block=0, energy=0, reduce_energy=0, effect=None, effect_chance=1.0,
                  effect_on_damage=False, lifesteal=0, target_type="enemy",
                  spawn_enemy=None, spawn_count=0, draw=0, discard=0, buff_strenght=0, cost=1):
         self.name = name
         self.damage = damage
         self.block = block
         self.energy = energy
+        self.reduce_energy = reduce_energy
         self.effect = effect
         self.effect_chance = effect_chance
         self.effect_on_damage = effect_on_damage
@@ -76,6 +77,11 @@ class Card:
 
         if self.energy:
             user.energy += self.energy
+
+        if self.reduce_energy:
+            target.reduced_energy += self.reduce_energy
+            print(
+                f"{target.name} byl na nadcházející kolo připraven o {self.reduce_energy} energii/e")
 
         if self.buff_strenght:
             user.add_temporary_strenght(self.buff_strenght)
@@ -168,7 +174,7 @@ class Poison(Status_Effect):
             suppress_print=True  # tisk jen zde
         )
         print(
-            f"{Colors.RED}{target.name} trpí otravou a obdržel {dmg_done} dmg (armor ignorován) - (HP: {target.hp}{Colors.RESET}).")
+            f"{Colors.RED}{target.name} trpí otravou a obdržel {dmg_done} dmg (block ignorován) - (HP: {target.hp}{Colors.RESET}).")
         input("ENTER pro pokračování...")
 
     def copy(self):
@@ -220,6 +226,8 @@ def print_cards(cards):
             parts.append(f"BLOCK:{card.block}")
         if card.lifesteal:
             parts.append(f"LIFESTEAL:{card.lifesteal}")
+        if card.energy:
+            parts.append(f"ENERGY:+{card.energy}")
         if card.buff_strenght:
             parts.append(f"BUFF STRENGHT:{card.buff_strenght}")
         if card.effect:
