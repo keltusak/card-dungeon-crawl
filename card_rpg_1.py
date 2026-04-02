@@ -1,11 +1,16 @@
 import random
 import math
-import core
-import gear
-import abilities
 import sys
 import os
 from collections import deque
+
+#ostatní soubory
+import core
+import gear
+import abilities
+import character
+import monsters
+
 
 
 def clear_screen():
@@ -460,7 +465,7 @@ class GameMap:
         tile = game_map.grid[y][x]
 
         if tile == "E":
-            enemies = create_enemy_group(player.dungeon_level)
+            enemies = monsters.create_enemy_group(player.dungeon_level)
             survived = combat_function(player, enemies)
 
             if survived:
@@ -687,7 +692,7 @@ def show_inventory(player):
                 print("\n=== SCHOPNOSTI ===")
 
                 if not player.abilities:
-                    print("Nemáš žádné schopnosti.")
+                    print("Zatím nemáš žádné schopnosti.")
                     input("\nENTER pro návrat do inventáře...")
                     return
 
@@ -809,115 +814,6 @@ def move_player(cmd, x, y, game_map):
     else:
         return new_x, new_y
 
-
-def create_enemy_by_name(name):
-    enemy_types = {
-        "Goblin": {
-            "hp": 12,
-            "equipment": [gear.broken_sword],
-        },
-        "Vrah": {
-            "hp": 10,
-            "equipment": [gear.poison_dagger],
-        },
-        "Strážce": {
-            "hp": 15,
-            "equipment": [gear.broken_sword, gear.shield],
-            "abilities": [abilities.maintaining_defense],
-        },
-        "Obří komár": {
-            "hp": 5,
-            "equipment": [gear.proboscis, gear.wings],
-        },
-        "Mraveniště": {
-            "hp": 14,
-            "equipment": [gear.ant_queen],
-        },
-        "Mravenec": {
-            "hp": 1,
-            "equipment": [gear.mandibles],
-        },
-        "Goblinní zvěd": {
-            "hp": 12,
-            "equipment": [gear.broken_sword, gear.horn, gear.reflexis],
-        },
-        "Goblinní válečník": {
-            "hp": 16,
-            "equipment": [gear.sword, gear.shield, gear.war_paints],
-        },
-        "Pavoučí mládě": {
-            "hp": 7,
-            "equipment": [gear.small_fangs, gear.exoskelet],
-        },
-        "Pavouk s vejcem": {
-            "hp": 16,
-            "equipment": [gear.fangs, gear.exoskelet, gear.spiders_cocon],
-        },
-        "Černý medvěd": {
-            "hp": 20,
-            "equipment": [gear.jaw],
-            "actions": 2
-        },
-    }
-
-    template = enemy_types[name]
-
-    enemy = Character(name, template["hp"])
-    for item in template["equipment"]:
-        enemy.equip_item(item, suppress_print=True)
-    enemy.build_deck()
-
-    for ability in template.get("abilities", []):
-        ability.apply(enemy)
-
-    enemy.actions = template.get("actions", 1)
-
-    return enemy
-
-
-def create_enemy_group(dungeon_level=1):
-    encounter_types = [
-        {"type": "komáři", "enemies": [
-            ("Obří komár", 2, 3)], "levels": [1, 2]},
-        {"type": "goblini", "enemies": [("Goblin", 1, 2)], "levels": [1]},
-        {"type": "strážci", "enemies": [("Strážce", 1, 2)], "levels": [1, 2]},
-        {"type": "vrazi", "enemies": [("Vrah", 1, 2)], "levels": [1, 2, 3]},
-        {"type": "mravenci", "enemies": [
-            ("Mraveniště", 1, 1)], "levels": [1, 2]},
-        # od lvl 2
-        {"type": "gobliní průzkumník", "enemies": [
-            ("Goblinní zvěd", 1, 1)], "levels": [2, 3]},
-        {"type": "gobliní hlídka", "enemies": [
-            ("Goblinní válečník", 1, 1), ("Goblin", 1, 1)], "levels": [2, 4]},
-        {"type": "gobliní stráž", "enemies": [
-            ("Goblinní válečník", 1, 1), ("Goblinní zvěd", 1, 1)], "levels": [2, 4]},
-        {"type": "lovící pavouk", "enemies": [
-            ("Pavouk s vejcem", 1, 1)], "levels": [3, 4]},
-        {"type": "zuřivý medvěd", "enemies": [
-            ("Černý medvěd", 1, 1)], "levels": [3, 4]},
-    ]
-
-    possible_encounters = [
-        e for e in encounter_types if dungeon_level in e["levels"]]
-
-    if not possible_encounters:
-        raise ValueError(
-            f"Pro dungeon level {dungeon_level} nejsou definované žádné skupiny nepřátel.")
-
-    encounter = random.choice(possible_encounters)
-
-    enemies = []
-    for enemy_info in encounter["enemies"]:
-        name, min_count, max_count = enemy_info
-        count = random.randint(min_count, max_count)
-        for _ in range(count):
-            enemies.append(create_enemy_by_name(name))
-
-    print(
-        f"Narazil jsi na skupinu: {encounter['type']} ({len(enemies)} nepřátel)")
-    return enemies
-
-
 class RectRoom:
     def __init__(self, x, y, w, h):
         self.x1 = x
@@ -935,310 +831,6 @@ class RectRoom:
             self.x1 <= other.x2 and self.x2 >= other.x1 and
             self.y1 <= other.y2 and self.y2 >= other.y1
         )
-
-
-class Character:
-    def __init__(self, name, hp, strenght=0, temporary_strenght=0):
-        self.name = name
-        self.max_hp = hp
-        self.hp = hp
-        self.strenght = strenght
-        self.temporary_strenght = temporary_strenght
-        self.saved_block = 0
-
-        self.block = 0
-        self.abilities = []
-        self.status_effects = []
-
-        # pomocné proměnné pro ability
-        self.attack_cards_played = 0
-
-        self.slots = {
-            "hand": [None, None],
-            "body": [None],
-            "belt": [None, None],
-            "pocket": [None, None, None],
-            "ring": [None, None],
-            "companion": [None]
-        }
-        self.inventory = []
-        self.equipment = []
-
-        self.deck = []
-        self.hand = []
-        self.discard = []
-
-    def build_deck(self):
-        self.deck = []
-
-        added_items = set()
-
-        # --- ITEMY ---
-        for slot_list in self.slots.values():
-            for item in slot_list:
-                if not item:
-                    continue
-
-                if item.two_handed:
-                    if id(item) in added_items:
-                        continue
-                    added_items.add(id(item))
-
-                self.deck.extend(item.cards)
-
-        # --- SYNERGIE ---
-        equipment_names = [item.name for slot in self.slots.values()
-                           for item in slot if item]
-
-        for synergy in core.SYNERGIES:
-            if all(req in equipment_names for req in synergy["requires"]):
-                self.deck.extend(synergy["cards"])
-
-        # --- ABILITIES ---
-        for ability in self.abilities:
-            if getattr(ability, "active", True) and ability.type == "card":
-                self.deck.extend(ability.cards)
-
-        random.shuffle(self.deck)
-
-    def is_level_up(self):
-        if self.xp >= self.lvl*5:
-            self.xp = self.xp - self.lvl*5
-            return True
-        return False
-
-    def draw(self, n=3):
-        for _ in range(n):
-            if not self.deck:
-                self.deck = self.discard
-                self.discard = []
-                shuffle_deck(self.deck, shuffler=self)
-
-            if self.deck:
-                self.hand.append(self.deck.pop())
-
-    def apply_fatigue(self):
-        if self.fatigue > 0:
-            print(f"{self.name} cítí únavu a ztrácí {self.fatigue} HP!")
-            input("ENTER pro pokračování...")
-            self.hp -= self.fatigue
-            if self.hp < 0:
-                self.hp = 0
-        self.fatigue += 1
-
-    def play_card(self, index, target=None, enemies_list=None, create_enemy_func=None):
-        if 0 <= index < len(self.hand):
-            card = self.hand.pop(index)
-            # předáme všechny potřebné argumenty kartě
-            card.play(user=self, target=target, enemies_list=enemies_list,
-                      create_enemy_func=create_enemy_func)
-            self.discard.append(card)
-        else:
-            print("Neplatný index karty")
-
-    def take_damage(self, amount, ignore_armor=False, suppress_print=False):
-        for effect in self.status_effects:
-            if isinstance(effect, core.Dodge):
-                if random.random() < effect.chance:
-                    if not suppress_print:
-                        print(f"{self.name} se vyhnul útoku!")
-                    return 0
-
-        if ignore_armor:
-            self.hp -= amount
-            if not suppress_print:
-                print(
-                    f"{Colors.RED}{self.name} dostal {amount} dmg (ignoruje armor) (HP: {self.hp}{Colors.RESET})")
-            return amount
-
-        reduced = max(amount - self.block, 0)
-        self.block = max(self.block - amount, 0)
-        self.hp -= reduced
-
-        if not suppress_print:
-            print(
-                f"{Colors.RED}{self.name} dostal {reduced} dmg (HP: {self.hp}{Colors.RESET})")
-        return reduced
-
-    def equip_item(self, item, suppress_print=False):
-        # pokud je obouruční, musí být volné **oba hand sloty**
-        if item.slot_type == "hand" and getattr(item, "two_handed", False):
-            if any(self.slots["hand"]):
-                print("Potřebuješ volné oba hand sloty pro obouruční zbraň!")
-                input("ENTER pro pokračování...")
-                return False
-            else:
-                self.slots["hand"][0] = item
-                self.slots["hand"][1] = item
-                if item in self.inventory:
-                    self.inventory.remove(item)
-                print(f"{self.name} vybavil obouruční zbraň {item.name}")
-                return True
-
-        # standardní logika pro jednoruké zbraně
-        slots = self.slots[item.slot_type]
-        for i in range(len(slots)):
-            if slots[i] is None:
-                slots[i] = item
-                if item in self.inventory:
-                    self.inventory.remove(item)
-                if not suppress_print:
-                    print(f"{self.name} vybavil {item.name}")
-                return True
-
-        print("Není volný slot")
-        return False
-
-    def unequip_item(self, slot_type, index):
-        item = self.slots[slot_type][index]
-
-        if item:
-            # pokud je obouruční a slot je "hand", odeber oba sloty
-            if slot_type == "hand" and getattr(item, "two_handed", False):
-                for i in range(len(self.slots["hand"])):
-                    if self.slots["hand"][i] == item:
-                        self.slots["hand"][i] = None
-                print(f"{self.name} sundal obouruční zbraň: {item.name}")
-            else:
-                self.slots[slot_type][index] = None
-                print(f"{self.name} sundal {item.name}")
-
-            self.inventory.append(item)
-        else:
-            print("Slot je prázdný")
-
-    def reset_combat(self):
-        self.deck = []
-        self.hand = []
-        self.discard = []
-        self.status_effects = []
-        self.block = 0
-        self.temporary_strenght = 0
-        self.fatigue = 0
-        self.attack_cards_played = 0
-
-    def add_block(self, amount):
-        self.block += amount
-        print(f"{Colors.GRAY}{self.name} získal {amount} block{Colors.RESET}")
-
-    def add_temporary_strenght(self, amount):
-        self.temporary_strenght += amount
-        print(f"{self.name} získal {amount} dočasné síly")
-
-    def apply_effect(self, effect):
-        self.status_effects.append(effect)
-        effect.apply(self)
-
-    def is_stunned(self):
-        return any(isinstance(e, core.Stun) for e in self.status_effects)
-
-    def show_hand(self):
-        print("\nTvoje karty:")
-        core.print_cards(player.hand)
-
-    def has_playable_card(self):
-        for card in player.hand:
-            if card.cost <= self.energy:
-                return True
-        return False
-
-    def player_turn(player, enemies):
-        player.energy = 2
-        player.energy -= player.reduced_energy
-        player.reduced_energy = 0
-
-        while player.hand and player.has_playable_card():
-            clear_screen()
-
-            print(f"\n{Colors.GREEN}--- Tvůj tah ---{Colors.RESET}")
-            print(
-                f"- {player.name} (HP: {player.hp}, {Colors.GRAY}Block: {player.block}{Colors.RESET}, Energy: {player.energy}"
-                + (f", Total_strenght: {player.strenght + player.temporary_strenght}"
-                   if (player.strenght + player.temporary_strenght) != 0 else "")
-                + f"){format_status_effects(player)}"
-            )
-
-            print("\nNepřátelé:")
-            for e in enemies:
-                if e.hp > 0:
-                    print(
-                        f"- {e.name} (HP: {e.hp}, {Colors.GRAY}Block: {e.block}{Colors.RESET}"
-                        + (f", Total_strenght: {e.strenght + e.temporary_strenght}"
-                           if (e.strenght + e.temporary_strenght) != 0 else "")
-                        + f"){format_status_effects(e)}"
-                    )
-
-            player.show_hand()
-
-            print("\n(ENTER = ukončit tah)")
-            choice = input("Vyber kartu: ")
-
-            if choice == "":
-                break
-
-            if not choice.isdigit():
-                print("Neplatná volba")
-                input("ENTER...")
-                continue
-
-            index = int(choice)
-
-            if index < 0 or index >= len(player.hand):
-                print("Neplatná karta")
-                input("ENTER...")
-                continue
-
-            card = player.hand[index]
-
-            if card.cost > player.energy:
-                print("Nedostatek energie")
-                input("ENTER...")
-                continue
-
-            # ===== TARGET =====
-            if card.target_type == "enemy":
-                target = choose_enemy(enemies)
-                player.play_card(index, target)
-
-            elif card.target_type == "self":
-                player.play_card(index, player)
-
-            elif card.target_type == "all_enemies":
-                for e in enemies:
-                    if e.hp > 0:
-                        card.play(player, e)
-                player.hand.pop(index)
-                player.discard.append(card)
-
-            player.energy -= card.cost
-
-            # ===== KONTROLY =====
-            if all(e.hp <= 0 for e in enemies):
-                return "enemy_dead"
-
-            if player.hp <= 0:
-                return "player_dead"
-
-            print(f"\nZbývá energie: {player.energy}")
-
-            input("\nENTER pro pokračování...")
-
-        return None
-
-    def process_status(self):
-        for effect in self.status_effects:
-            effect.apply(self)
-
-        new_effects = []
-        for effect in self.status_effects:
-            if not effect.tick():
-                new_effects.append(effect)
-            else:
-                if self.hp > 0:
-                    print(f"{self.name} se zbavil efektu {effect.name}.")
-
-        self.status_effects = new_effects
-
 
 def choose_enemy(enemies):
     alive = []
@@ -1263,40 +855,6 @@ def choose_enemy(enemies):
 
         if 0 <= index < len(alive):
             return alive[index]
-
-
-def shuffle_deck(deck, shuffler):
-    random.shuffle(deck)
-
-    if shuffler is player:
-        if hasattr(player, "fatigue"):
-            if player.fatigue > 0:
-                print(
-                    f"{Colors.RED}{player.name} cítí únavu a ztrácí {player.fatigue} HP!{Colors.RESET}")
-                input("ENTER pro pokračování...")
-                player.hp -= player.fatigue
-            player.fatigue += 1
-
-
-class Colors:
-    RED = "\033[91m"
-    GREEN = "\033[92m"
-    YELLOW = "\033[93m"
-    BLUE = "\033[94m"
-    GRAY = "\033[90m"
-    RESET = "\033[0m"
-
-
-def format_status_effects(character):
-    if not character.status_effects:
-        return ""
-
-    effects = []
-    for effect in character.status_effects:
-        effects.append(f"{effect.name}({effect.duration})")
-
-    return " | " + ", ".join(effects)
-
 
 def combat(player, enemies):
     player.reset_combat()
@@ -1327,19 +885,19 @@ def combat(player, enemies):
         player.saved_block = 0
 
         print(
-            f"- {player.name} (HP: {player.hp}, {Colors.GRAY}Block: {player.block}{Colors.RESET}, Energy: {player.energy}"
+            f"- {player.name} (HP: {player.hp}, {core.Colors.GRAY}Block: {player.block}{core.Colors.RESET}, Energy: {player.energy}"
             + (f", Total_strenght: {player.strenght + player.temporary_strenght}"
                if (player.strenght + player.temporary_strenght) != 0 else "")
-            + f"){format_status_effects(player)}"
+            + f"){core.format_status_effects(player)}"
         )
         print("\nNepřátelé:")
         for e in enemies:
             if e.hp > 0:
                 print(
-                    f"- {e.name} (HP: {e.hp}, {Colors.GRAY}Block: {e.block}{Colors.RESET}"
+                    f"- {e.name} (HP: {e.hp}, {core.Colors.GRAY}Block: {e.block}{core.Colors.RESET}"
                     + (f", Total_strenght: {e.strenght + e.temporary_strenght}"
                        if (e.strenght + e.temporary_strenght) != 0 else "")
-                    + f"){format_status_effects(e)}"
+                    + f"){core.format_status_effects(e)}"
                 )
         print()
 
@@ -1363,7 +921,7 @@ def combat(player, enemies):
             else:
                 player.draw(2)
 
-            result = Character.player_turn(player, enemies)
+            result = character.Character.player_turn(player, enemies)
 
             if result == "enemy_dead":
                 print("Vyhrál jsi!")
@@ -1374,21 +932,21 @@ def combat(player, enemies):
                 input("ENTER pro pokračování...")
                 return False
         clear_screen()
-        print(f"\n{Colors.RED}--- Nepřátelský tah ---{Colors.RESET}")
+        print(f"\n{core.Colors.RED}--- Nepřátelský tah ---{core.Colors.RESET}")
         print(
-            f"- {player.name} (HP: {player.hp}, {Colors.GRAY}Block: {player.block}{Colors.RESET}, Energy: {player.energy}"
+            f"- {player.name} (HP: {player.hp}, {core.Colors.GRAY}Block: {player.block}{core.Colors.RESET}, Energy: {player.energy}"
             + (f", Total_strenght: {player.strenght + player.temporary_strenght}"
                if (player.strenght + player.temporary_strenght) != 0 else "")
-            + f"){format_status_effects(player)}"
+            + f"){core.format_status_effects(player)}"
         )
         print("\nNepřátelé:")
         for e in enemies:
             if e.hp > 0:
                 print(
-                    f"- {e.name} (HP: {e.hp}, {Colors.GRAY}Block: {e.block}{Colors.RESET}"
+                    f"- {e.name} (HP: {e.hp}, {core.Colors.GRAY}Block: {e.block}{core.Colors.RESET}"
                     + (f", Total_strenght: {e.strenght + e.temporary_strenght}"
                        if (e.strenght + e.temporary_strenght) != 0 else "")
-                    + f"){format_status_effects(e)}"
+                    + f"){core.format_status_effects(e)}"
                 )
         player.show_hand()
 
@@ -1415,7 +973,7 @@ def combat(player, enemies):
 
             # Zpracování stunu
             if enemy.is_stunned():
-                print(f"{Colors.YELLOW}{enemy.name} je omráčen!{Colors.RESET}")
+                print(f"{core.Colors.YELLOW}{enemy.name} je omráčen!{core.Colors.RESET}")
                 enemy.process_status()
                 if enemy.hp <= 0:
                     continue
@@ -1425,20 +983,25 @@ def combat(player, enemies):
             if enemy.hp <= 0:
                 continue
 
-            enemy.draw(enemy.actions)  # lízne tolik karet, kolik může zahrát
+            if enemy.ai:
+                #nepřátelé s prioritami hraných karet
+                enemy.ai(enemy, player, enemies)
+            else:
+                # běžní nepřátelé
+                enemy.draw(enemy.actions)
 
-            for _ in range(enemy.actions):
-                if not enemy.hand:
-                    break
+                for _ in range(enemy.actions):
+                    if not enemy.hand:
+                        break
 
-                index = random.randint(0, len(enemy.hand) - 1)
+                    index = random.randint(0, len(enemy.hand) - 1)
 
-                enemy.play_card(
-                    index,
-                    target=player,
-                    enemies_list=enemies,
-                    create_enemy_func=create_enemy_by_name
-                )
+                    enemy.play_card(
+                        index,
+                        target=player,
+                        enemies_list=enemies,
+                        create_enemy_func=monsters.create_enemy_by_name
+                    )
 
             if player.hp <= 0:
                 print("Prohrál jsi!")
@@ -1458,7 +1021,7 @@ def combat(player, enemies):
 
 
 # ===== MAIN LOOP ========
-player = Character("Hráč", 20)
+player = character.Character("Hráč", 20)
 player.dungeon_level = 1
 player.fatigue = 0
 player.energy = 2

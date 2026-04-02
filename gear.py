@@ -25,7 +25,7 @@ flail = Equipment("Řemdich", "hand", [
     Card("Švih", damage=3),
     Card("Švih", damage=3),
     Card("Rozmáchnutí", damage=2, target_type="all_enemies"),
-    Card("Vyčerpávající švih", damage=5, discard=1),
+    Card("Vyčerpávající švih", damage=6, discard=1),
 ])
 
 battle_axe = Equipment("Bitevní sekera", "hand", [
@@ -112,8 +112,13 @@ small_fangs = Equipment("Malé chelicery", "hand", [
 fangs = Equipment("Chelicery", "hand", [
     Card("Kousnutí", damage=4, effect=Poison(2, 4), effect_on_damage=True),
     Card("Kousnutí", damage=4, effect=Poison(2, 4), effect_on_damage=True),
-    Card("Paralizující kousnutí", damage=3, effect=Stun(
+    Card("Paralyzující kousnutí", damage=3, effect=Stun(
         1), effect_chance=0.6, effect_on_damage=True),
+])
+
+newborns_exoskelet = Equipment("Nevyvynutý_exoskelet", "body", [
+    Card("Pokrytí", block=3, target_type="self"),
+    Card("Pokrytí", block=3, target_type="self"),
 ])
 
 exoskelet = Equipment("Exoskelet", "body", [
@@ -139,6 +144,16 @@ hide = Equipment("Medvědí kůže", "body", [
     Card("Srst", block=4, target_type="self"),
 ])
 
+short_bow = Equipment("Krátký luk", "hand", [
+    Card("Výstřel", damage=4),
+    Card("Výstřel", damage=4)
+])
+
+set_of_traps = Equipment("Sada pastí", "belt", [
+    Card("Síť", reduce_energy=1),
+    Card("Paralyzující jehly", damage=1, effect=Stun(1), effect_chance=0.8, effect_on_damage=True),
+    #Medvědí pasti, dá jemu nebo jeho spojenci effect Torns (3,2) - na tolik kolik, když na něj zaútočíš utrpíš tolik dmg
+])
 # ===== Pomocné karty =====
 
 war_paints = Equipment("Válečné barvy", "pocket", [

@@ -1,5 +1,13 @@
 import random
+import os
 
+def clear_screen():
+    # Windows
+    if os.name == "nt":
+        os.system("cls")
+    # Linux / Mac
+    else:
+        os.system("clear")
 
 class Colors:
     RED = "\033[91m"
@@ -8,7 +16,6 @@ class Colors:
     BLUE = "\033[94m"
     GRAY = "\033[90m"
     RESET = "\033[0m"
-
 
 class Ability:
     def __init__(self, name, description, ability_type, active=True, effect=None, trigger="passive", cards=None):
@@ -138,6 +145,28 @@ class Card:
                     print(
                         f"{self.effect.name} se nepodařilo aplikovat ({int(self.effect_chance*100)}% šance)")
 
+def shuffle_deck(deck, shuffler):
+    random.shuffle(deck)
+
+    if hasattr(shuffler, "fatigue"):
+        if shuffler.fatigue > 0:
+            print(
+                f"{Colors.RED}{shuffler.name} cítí únavu a ztrácí {shuffler.fatigue} HP!{Colors.RESET}"
+            )
+            input("ENTER pro pokračování...")
+            shuffler.hp -= shuffler.fatigue
+
+        shuffler.fatigue += 1
+
+def format_status_effects(character):
+    if not character.status_effects:
+        return ""
+
+    effects = []
+    for effect in character.status_effects:
+        effects.append(f"{effect.name}({effect.duration})")
+
+    return " | " + ", ".join(effects)
 
 class Status_Effect:
     def __init__(self, name, duration):
@@ -248,11 +277,18 @@ def print_cards(cards):
         print(f"{i}: {card.name} ({stats})")
 
 
+
 SYNERGIES = [
     {
         "requires": ["Krátký Meč", "Štít s bodcem"],
         "cards": [
             Card("Útok a kryt", damage=4, block=4)
+        ]
+    },
+    {
+        "requires": ["Řemdich", "Štít"],
+        "cards": [
+            Card("Rozmáchnutí zpoza krytu", damage=2, block=4, target_type="all_enemies")
         ]
     },
     {
