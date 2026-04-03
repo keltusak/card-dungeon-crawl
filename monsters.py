@@ -92,7 +92,7 @@ def create_enemy_group(dungeon_level=1):
             ("Goblinní válečník", 1, 1), ("Goblinní zvěd", 1, 1)], "levels": [2, 4]},
         # od lvl 3
         {"type": "komáří roj", "enemies": [
-            ("Obří komár", 4)], "levels": [3]},
+            ("Obří komár", 4, 4)], "levels": [3]},
         {"type": "Přepad", "enemies": [
             ("Štítonoš", 1, 1), ("Vrah", 1, 1), ("Lovec lidí", 1, 1)], "levels": [3, 4]},
         {"type": "lovící pavouk", "enemies": [
