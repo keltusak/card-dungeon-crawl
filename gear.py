@@ -1,4 +1,4 @@
-from core import Card, Stun, Poison, Dodge, Equipment
+from core import Card, Stun, Poison, Dodge, Thorns, Equipment
 
 # ===== Zbraně =====
 
@@ -152,7 +152,7 @@ short_bow = Equipment("Krátký luk", "hand", [
 set_of_traps = Equipment("Sada pastí", "belt", [
     Card("Síť", reduce_energy=1),
     Card("Paralyzující jehly", damage=1, effect=Stun(1), effect_chance=0.8, effect_on_damage=True),
-    #Medvědí pasti, dá jemu nebo jeho spojenci effect Torns (3,2) - na tolik kolik, když na něj zaútočíš utrpíš tolik dmg
+    Card("Medvědí pasti", effect=Thorns(1, 2, 3), target_type="ally")
 ])
 # ===== Pomocné karty =====
 

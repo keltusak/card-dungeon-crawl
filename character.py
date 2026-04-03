@@ -105,7 +105,7 @@ class Character:
         else:
             print("Neplatný index karty")
 
-    def take_damage(self, amount, ignore_armor=False, suppress_print=False):
+    def take_damage(self, amount, attacker=None, ignore_armor=False, suppress_print=False):
         for effect in self.status_effects:
             if isinstance(effect, core.Dodge):
                 if random.random() < effect.chance:
@@ -114,19 +114,27 @@ class Character:
                     return 0
 
         if ignore_armor:
+            reduced = amount
             self.hp -= amount
             if not suppress_print:
-                print(
-                    f"{Colors.RED}{self.name} dostal {amount} dmg (ignoruje armor) (HP: {self.hp}{Colors.RESET})")
-            return amount
+                print(f"{Colors.RED}{self.name} dostal {amount} dmg (ignoruje armor) (HP: {self.hp}{Colors.RESET})")
+        else:
+            reduced = max(amount - self.block, 0)
+            self.block = max(self.block - amount, 0)
+            self.hp -= reduced
 
-        reduced = max(amount - self.block, 0)
-        self.block = max(self.block - amount, 0)
-        self.hp -= reduced
+            if not suppress_print:
+                print(f"{Colors.RED}{self.name} dostal {reduced} dmg (HP: {self.hp}{Colors.RESET})")
 
-        if not suppress_print:
-            print(
-                f"{Colors.RED}{self.name} dostal {reduced} dmg (HP: {self.hp}{Colors.RESET})")
+        if attacker and reduced > 0:
+            for effect in self.status_effects:
+                if isinstance(effect, core.Thorns):
+                    if random.random() < effect.chance:
+                        attacker.hp -= effect.damage
+                        if not suppress_print:
+                            print(f"{Colors.RED}{attacker.name} se při útoku poranil a dostal {effect.damage} dmg (HP: {attacker.hp}{Colors.RESET})")
+
+
         return reduced
 
     def equip_item(self, item, suppress_print=False):

@@ -57,6 +57,22 @@ class Card:
         self.buff_strenght = buff_strenght
         self.cost = cost
 
+    def get_valid_targets(user, target_type, player, enemies):
+        if target_type == "enemy":
+            return [e for e in enemies if e.hp > 0]
+
+        elif target_type == "ally":
+            if user is player:
+                return [player]
+            else:
+                return [e for e in enemies if e.hp > 0]
+
+        elif target_type == "self":
+            return [user]
+
+        elif target_type == "any":
+            return [player] + [e for e in enemies if e.hp > 0]
+
     def play(self, user, target, enemies_list=None, create_enemy_func=None):
         print(f"{user.name} používá {self.name}")
 
@@ -66,7 +82,7 @@ class Card:
             total_damage = self.damage + \
                 getattr(user, "strenght", 0) + \
                 getattr(user, "temporary_strenght", 0)
-            dmg_done = target.take_damage(total_damage)
+            dmg_done = target.take_damage(total_damage, attacker=user)
 
             for ability in user.abilities:
                 if ability.type == "passive" and ability.trigger == "on_attack_played" and ability.active:
@@ -147,9 +163,9 @@ class Card:
 
 def shuffle_deck(deck, shuffler):
     random.shuffle(deck)
-
-    if hasattr(shuffler, "fatigue"):
-        if shuffler.fatigue > 0:
+    # aplikuj fatigue pouze pokud je shuffler opravdu hráč
+    if hasattr(shuffler, "is_player") and shuffler.is_player:
+        if hasattr(shuffler, "fatigue") and shuffler.fatigue > 0:
             print(
                 f"{Colors.RED}{shuffler.name} cítí únavu a ztrácí {shuffler.fatigue} HP!{Colors.RESET}"
             )
@@ -220,6 +236,17 @@ class Stun(Status_Effect):
     def copy(self):
         return Stun(self.duration)
 
+class Thorns(Status_Effect):
+    def __init__(self, chance, damage, duration=1):
+        super().__init__("Trny", duration)
+        self.damage = damage
+        self.chance = chance
+
+    def description(self):
+        return f"({self.duration} kola) {int(self.chance*100)}% šance způsobit útočníkovi ({self.damage}) poškození."
+
+    def copy(self):
+        return Thorns(self.chance, self.damage, self.duration)
 
 class Dodge(Status_Effect):
     def __init__(self, chance, duration=1):

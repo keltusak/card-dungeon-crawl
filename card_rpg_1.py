@@ -995,10 +995,23 @@ def combat(player, enemies):
                         break
 
                     index = random.randint(0, len(enemy.hand) - 1)
+                    card = enemy.hand[index]
+
+                    if card.target_type == "self":
+                        target = enemy
+                    elif card.target_type == "ally":
+
+                        allies = [e for e in enemies if e.hp > 0 and e != enemy]
+                        if allies:
+                            target = random.choice(allies)
+                        else:
+                            target = enemy
+                    else:
+                        target = player
 
                     enemy.play_card(
                         index,
-                        target=player,
+                        target=target,
                         enemies_list=enemies,
                         create_enemy_func=monsters.create_enemy_by_name
                     )
@@ -1022,6 +1035,7 @@ def combat(player, enemies):
 
 # ===== MAIN LOOP ========
 player = character.Character("Hráč", 20)
+player.is_player = True
 player.dungeon_level = 1
 player.fatigue = 0
 player.energy = 2
