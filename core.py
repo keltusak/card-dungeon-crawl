@@ -38,7 +38,7 @@ class Ability:
 
 class Card:
     def __init__(self, name, damage=0, block=0, energy=0, reduce_energy=0, effect=None, effect_chance=1.0,
-                 effect_on_damage=False, lifesteal=0, target_type="enemy",
+                 effect_on_damage=False, lifesteal=0, devour = 0, target_type="enemy",
                  spawn_enemy=None, spawn_count=0, draw=0, discard=0, buff_strenght=0, cost=1):
         self.name = name
         self.damage = damage
@@ -49,6 +49,7 @@ class Card:
         self.effect_chance = effect_chance
         self.effect_on_damage = effect_on_damage
         self.lifesteal = lifesteal
+        self.devour = devour
         self.target_type = target_type
         self.draw = draw
         self.discard = discard
@@ -96,7 +97,10 @@ class Card:
                 f"{user.name} vyvolal nepřítele: {self.spawn_count} x {new_enemy.name}!")
 
         if self.block:
-            user.add_block(self.block)
+            if self.target_type == "ally":
+                target.add_block(self.block)
+            else:
+                user.add_block(self.block)
 
         if self.energy:
             user.energy += self.energy
@@ -114,6 +118,14 @@ class Card:
             user.hp = min(user.max_hp, user.hp + heal_amount)
             print(
                 f"{user.name} se léčí o {heal_amount} HP díky lifestealu (HP: {user.hp})")
+            
+        if self.devour > 0: 
+            for _ in range(self.devour):
+                if not target.discard:
+                    break
+                removed_card = target.discard.pop(random.randint(0, len(target.discard)-1))
+                print(f"Karta {removed_card.name} byla dočasně odstraněna z {target.name}ova odhazovacího balíčku")
+
 
         if self.draw > 0:
             print(f"{user.name} dobral {self.draw} kartu/karty díky {self.name}")
@@ -315,7 +327,7 @@ SYNERGIES = [
     {
         "requires": ["Řemdich", "Štít"],
         "cards": [
-            Card("Rozmáchnutí zpoza krytu", damage=2, block=4, target_type="all_enemies")
+            Card("Rozmáchnutí zpoza krytu", damage=2, block=1, target_type="all_enemies")
         ]
     },
     {

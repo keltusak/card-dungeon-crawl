@@ -485,7 +485,7 @@ class GameMap:
             loot_options = [gear.ring_of_defense, gear.abakus, gear.madmans_eye, gear.war_paints,
                             gear.wurm_ring, gear.poisoners_ring, gear.ring_with_needle, gear.dagger,
                             gear.shield_with_spike, gear.caltrops, gear.flail, gear.rabits_paw, gear.battle_axe,
-                            gear.mace]
+                            gear.mace, gear.battle_plans]
             loot = random.choice(loot_options)
             player.inventory.append(loot)
             messages.append(f"Otevřel jsi truhlu a našel: {loot.name}")
@@ -526,21 +526,29 @@ def show_help():
     print("Použití inventáře:")
     print("- Můžeš si zde prohlédnout aktuální deck")
     print("- Můžeš se podívat co jednotlivé vybavená umí")
-    print("- Můžeš měnit své aktuálně používané vybavení\n")
+    print("- Můžeš měnit své aktuálně používané vybavení")
+    print("- Můžeš si zde spravovat své naučené schopnosti\n")
+    
+
+    print("\033[93mLevly:\033[0m")
+    print("- Za porážení nepřátel dostáváš zkušenosti")
+    print("- Při postupu na novou úroveň se zvýší tvé dosavadní maximální zdraví a")
+    print("máš možnost si vybrat jednu ze tří schopností, která se ti odemkne.\n")
 
     print("\033[93mTypy karet:\033[0m")
     print("- Útočné (DMG) - způsobují poškození nepříteli")
     print("- Obranné (BLOCK) - přidávají obranu na tento tah")
     print("- Efekty (EFFECT) - aplikují stavové efekty jako Omráčení, Úhyb, Otrava")
-    print("- Speciální - např. DRAW (táhni karty), DISCARD (odstraň karty)\n")
+    print("- Speciální - např. DRAW (táhni karty), DISCARD (zahoď karty)\n")
 
     print("\033[93mEfekty:\033[0m")
     print("- Omráčení (Stun) - jednotka vynechá tah")
     print("- Úhyb (Dodge) - šance vyhnout se útoku")
-    print("- Otrava (Poison) - poškození v průběhu několika kol\n")
+    print("- Otrava (Poison) - poškození v průběhu několika kol")
+    print("- Trny - útok na toho kdo má tento efekt, útočníkovi způsobí zranění\n")
 
     print("\033[93mSynergie:\033[0m")
-    print("- Když máš určité kombinace vybavení, získáš bonusové karty")
+    print("- Když používáš určité kombinace vybavení, získáš bonusové karty")
     print("- Např. 'Krátký Meč + Štít' = karta 'Útok a kryt'\n")
 
     print("\033[93mCíl hry:\033[0m")
@@ -950,9 +958,10 @@ def combat(player, enemies):
                 )
         player.show_hand()
 
-        for ability in enemy.abilities:
-            if ability.type == "passive" and ability.trigger == "after_opponent_turn" and ability.active:
-                ability.effect(enemy)
+        for enemy in enemies:
+            for ability in enemy.abilities:
+                if ability.type == "passive" and ability.trigger == "after_opponent_turn" and ability.active:
+                    ability.effect(enemy)
 
         # ===== ENEMY =====
         print("\n--- Nepřátelé hrají ---\n")

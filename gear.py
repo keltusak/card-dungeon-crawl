@@ -139,6 +139,12 @@ jaw = Equipment("Morda", "hand", [
     Card("Povalení", damage=3, reduce_energy=1),
 ])
 
+devourers_maw = Equipment("Žroutova tlama", "hand", [
+    Card("Kousnutí", damage=2),
+    Card("Škůdcovství", damage=1, devour=1),
+    Card("Škůdcovství", damage=1, devour=1),
+])
+
 hide = Equipment("Medvědí kůže", "body", [
     Card("Srst", block=4, target_type="self"),
     Card("Srst", block=4, target_type="self"),
@@ -147,6 +153,11 @@ hide = Equipment("Medvědí kůže", "body", [
 short_bow = Equipment("Krátký luk", "hand", [
     Card("Výstřel", damage=4),
     Card("Výstřel", damage=4)
+])
+
+shield_e = Equipment("Štít (nepřátelský)", "hand", [
+    Card("Blok", block=3, target_type="ally"),
+    Card("Silný blok", block=4, target_type="ally"),
 ])
 
 set_of_traps = Equipment("Sada pastí", "belt", [
@@ -201,10 +212,10 @@ ring_with_needle = Equipment("Prsten s jehlou", "ring", [
 # ===== Společníci =====
 
 friendly_ant = Equipment("Mravenec", "companion", [
-    Card("Kousnutí", damage=1, cost=0)
+    Card("Kousnutí", draw=1, damage=1, cost=0)
 ])
 
 crow = Equipment("Vrána", "companion", [
-    Card("Klovnutí", damage=2, effect=Dodge(0.2, 1), cost=1),
-    Card("Průzkum", draw=1, discard=1, cost=1)
+    Card("Klovnutí", damage=2, effect=Dodge(0.4, 1), cost=1),
+    Card("Průzkum", draw=1, discard=1, cost=0)
 ])

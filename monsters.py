@@ -16,7 +16,7 @@ def create_enemy_by_name(name):
         },
         "Štítonoš": {
             "hp": 15,
-            "equipment": [gear.broken_sword, gear.shield],
+            "equipment": [gear.broken_sword, gear.shield_e],
             "abilities": [abilities.maintaining_defense],
         },
         "Lovec lidí": {
@@ -35,13 +35,17 @@ def create_enemy_by_name(name):
             "hp": 1,
             "equipment": [gear.mandibles],
         },
+        "Žrout": {
+            "hp": 8,
+            "equipment": [gear.devourers_maw],
+        },
         "Goblinní zvěd": {
             "hp": 12,
             "equipment": [gear.broken_sword, gear.horn, gear.reflexis],
         },
         "Goblinní válečník": {
             "hp": 16,
-            "equipment": [gear.sword, gear.shield, gear.war_paints],
+            "equipment": [gear.sword, gear.shield_e, gear.war_paints],
         },
         "Pavoučí mládě": {
             "hp": 7,
@@ -57,6 +61,7 @@ def create_enemy_by_name(name):
             "equipment": [gear.jaw],
             "actions": 2
         },
+
     }
 
     template = enemy_types[name]
@@ -85,9 +90,9 @@ def create_enemy_group(dungeon_level=1):
         {"type": "mravenci", "enemies": [
             ("Mraveniště", 1, 1)], "levels": [1, 2]},
         # od lvl 2
-        {"type": "vrazi", "enemies": [("Vrah", 2)], "levels": [2]},
+        {"type": "vrazi", "enemies": [("Vrah", 2, 2)], "levels": [2]},
         {"type": "gobliní banda", "enemies": [
-            ("Goblinní válečník", 1, 1), ("Goblin", 1, 2)], "levels": [2, 4]},
+            ("Goblinní válečník", 1, 1), ("Goblin", 1, 2)], "levels": [2, 3]},
         {"type": "gobliní stráž", "enemies": [
             ("Goblinní válečník", 1, 1), ("Goblinní zvěd", 1, 1)], "levels": [2, 4]},
         # od lvl 3
@@ -97,8 +102,14 @@ def create_enemy_group(dungeon_level=1):
             ("Štítonoš", 1, 1), ("Vrah", 1, 1), ("Lovec lidí", 1, 1)], "levels": [3, 4]},
         {"type": "lovící pavouk", "enemies": [
             ("Pavouk s vejcem", 1, 1)], "levels": [3, 4]},
+        {"type": "Goblinní havěť", "enemies": [
+            ("Goblinní zvěd", 1, 1),("Žrout", 2, 3)], "levels": [3]},
         {"type": "zuřivý medvěd", "enemies": [
             ("Černý medvěd", 1, 1)], "levels": [3, 4]},
+        # od lvl 4
+        {"type": "gobliní kemp", "enemies": [
+            ("Goblinní válečník", 1, 1), ("Goblin", 1, 2), ("Žrout", 1, 2)], "levels": [4]},
+        
     ]
 
     possible_encounters = [
