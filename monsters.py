@@ -35,6 +35,11 @@ def create_enemy_by_name(name):
             "hp": 1,
             "equipment": [gear.mandibles],
         },
+        "Živoucí strom": {
+            "hp": 20,
+            "equipment": [gear.branches, gear.bark],
+            "actions": 2
+        },
         "Žrout": {
             "hp": 8,
             "equipment": [gear.devourers_maw],
@@ -46,6 +51,7 @@ def create_enemy_by_name(name):
         "Goblinní válečník": {
             "hp": 16,
             "equipment": [gear.sword, gear.shield_e, gear.war_paints],
+            "abilities": [abilities.maintaining_defense],
         },
         "Pavoučí mládě": {
             "hp": 7,
@@ -109,6 +115,8 @@ def create_enemy_group(dungeon_level=1):
         # od lvl 4
         {"type": "gobliní kemp", "enemies": [
             ("Goblinní válečník", 1, 1), ("Goblin", 1, 2), ("Žrout", 1, 2)], "levels": [4]},
+        {"type": "les", "enemies": [
+            ("Živoucí strom", 1, 1),], "levels": [1,2,3,4]},
         
     ]
 

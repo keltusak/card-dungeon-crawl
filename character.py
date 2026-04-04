@@ -131,6 +131,7 @@ class Character:
                 if isinstance(effect, core.Thorns):
                     if random.random() < effect.chance:
                         attacker.hp -= effect.damage
+                        #attacker.take_damage(effect.damage, suppress_print=True)
                         if not suppress_print:
                             print(f"{Colors.RED}{attacker.name} se při útoku poranil a dostal {effect.damage} dmg (HP: {attacker.hp}{Colors.RESET})")
 

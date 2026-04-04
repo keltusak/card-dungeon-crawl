@@ -165,6 +165,17 @@ set_of_traps = Equipment("Sada pastí", "belt", [
     Card("Paralyzující jehly", damage=1, effect=Stun(1), effect_chance=0.8, effect_on_damage=True),
     Card("Medvědí pasti", effect=Thorns(1, 2, 3), target_type="ally")
 ])
+
+branches = Equipment("Větve", "hand", [
+    Card("Švih", damage=4),
+    Card("Příval úderů", damage=6),
+    Card("Trní", effect=Thorns(0.7, 3, 3), target_type="self")
+])
+
+bark = Equipment("Pevná kůra", "body", [
+    Card("Kůra", block=8, target_type="self"),
+    Card("Kůra", block=8, target_type="self"),
+])
 # ===== Pomocné karty =====
 
 war_paints = Equipment("Válečné barvy", "pocket", [
