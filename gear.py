@@ -1,6 +1,15 @@
 from core import Card, Stun, Poison, Dodge, Thorns, Equipment
+from character import Character
 
 # ===== Zbraně =====
+
+wooden_staff= Equipment("Dřevěná hůl", "hand", [
+    Card("Krytí", block=3, target_type="self"),
+    Card("Krytí", block=3, target_type="self"),
+    Card("Úder a kryt", damage=2, block=3),
+    Card("Podražení nohou", damage=2, effect=Stun(1),
+         effect_chance=0.4, effect_on_damage=True),
+])
 
 dagger = Equipment("Dýka", "hand", [
     Card("Bodnutí", damage=3),
@@ -51,6 +60,13 @@ poison_dagger = Equipment("Otrávená dýka", "hand", [
     Card("Bodnutí", damage=3)
 ])
 
+cultistic_blade = Equipment("Kultistovo ostří", "hand", [
+    Card("Zářez", damage=2, combo=True ),
+    Card("Zářez", damage=2, combo=True ),
+    Card("Rituál", damage=2, energy=1, combo=True, target_type="self", cost=0),
+    Card("Setnutí", damage="combo", scale=2),
+])
+
 # ===== Štíty =====
 
 shield = Equipment("Štít", "hand", [
@@ -66,7 +82,7 @@ shield_with_spike = Equipment("Štít s bodcem", "hand", [
 
 # ===== Zbroje =====
 
-leather_armor = Equipment("Vycpávaná zbroj", "body", [
+padded_armor = Equipment("Vycpávaná zbroj", "body", [
     Card("Pokrytí", block=2, target_type="self"),
     Card("Pokrytí", block=2, target_type="self"),
 ])
@@ -192,7 +208,7 @@ battle_plans = Equipment("Bitevní plány", "belt", [
 ])
 
 caltrops = Equipment("Kaltropy", "pocket", [
-    Card("Vrhnutí", damage=1, target_type="all_enemies", cost=0)
+    Card("Nastražení", effect=Thorns(1, 1, 2), target_type="self", cost=0),
 ])
 
 rabits_paw = Equipment("Králičí packa", "pocket", [
@@ -201,6 +217,11 @@ rabits_paw = Equipment("Králičí packa", "pocket", [
 
 madmans_eye = Equipment("Šílencovo oko", "pocket", [
     Card("Šílené vize", damage=2, draw=2, target_type="self", cost=0)
+])
+
+ritual_statue = Equipment("Rituální soška", "belt", [
+    Card("Šepot", draw=1, discard=1, combo=True, target_type="self", cost=0),
+    Card("Prozření", draw="combo", target_type="self")
 ])
 # ===== Prsteny =====
 

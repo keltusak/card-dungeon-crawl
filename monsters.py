@@ -116,7 +116,7 @@ def create_enemy_group(dungeon_level=1):
         {"type": "gobliní kemp", "enemies": [
             ("Goblinní válečník", 1, 1), ("Goblin", 1, 2), ("Žrout", 1, 2)], "levels": [4]},
         {"type": "les", "enemies": [
-            ("Živoucí strom", 1, 1),], "levels": [1,2,3,4]},
+            ("Živoucí strom", 1, 1),], "levels": [4]},
         
     ]
 

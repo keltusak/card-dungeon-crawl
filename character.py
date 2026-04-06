@@ -3,13 +3,16 @@ import core
 from core import Colors, clear_screen, shuffle_deck, format_status_effects
 
 class Character:
-    def __init__(self, name, hp, strenght=0, temporary_strenght=0):
+    def __init__(self, name, hp, strenght=0, temporary_strenght=0, max_energy=2):
         self.name = name
         self.max_hp = hp
         self.hp = hp
         self.strenght = strenght
         self.temporary_strenght = temporary_strenght
+        
         self.saved_block = 0
+        self.combo_count = 0
+        self.energy = max_energy
 
         self.block = 0
         self.abilities = []
@@ -221,7 +224,7 @@ class Character:
         return False
 
     def player_turn(player, enemies):
-        player.energy = 2
+        player.energy = player.max_energy
         player.energy -= player.reduced_energy
         player.reduced_energy = 0
 
@@ -233,6 +236,7 @@ class Character:
                 f"- {player.name} (HP: {player.hp}, {Colors.GRAY}Block: {player.block}{Colors.RESET}, Energy: {player.energy}"
                 + (f", Total_strenght: {player.strenght + player.temporary_strenght}"
                    if (player.strenght + player.temporary_strenght) != 0 else "")
+                + (f", Combo: {player.combo_count}"if (player.combo_count) != 0 else "")
                 + f"){format_status_effects(player)}"
             )
 
@@ -341,3 +345,4 @@ def choose_enemy(enemies):
 
         if 0 <= index < len(alive):
             return alive[index]
+

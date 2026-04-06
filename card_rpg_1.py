@@ -3,6 +3,8 @@ import math
 import sys
 import os
 from collections import deque
+import textwrap
+import shutil
 
 #ostatní soubory
 import core
@@ -21,6 +23,27 @@ def clear_screen():
     else:
         os.system("clear")
 
+def get_terminal_width():
+    return shutil.get_terminal_size().columns
+
+def center_text(text, width):
+    return text.center(width)
+
+def print_box(title, stats, description, width=60):
+    print("=" * width)
+    print(title.center(width))
+    print("=" * width)
+
+    for stat in stats:
+        print(stat.ljust(width))
+
+    print("-" * width)
+
+    wrapped_text = textwrap.wrap(description, width)
+    for line in wrapped_text:
+        print(line)
+
+    print("=" * width)
 
 class GameMap:
     def __init__(self, width, height):
@@ -883,6 +906,7 @@ def combat(player, enemies):
         print("\n--- Nové kolo ---")
 
         player.block = 0
+        player.combo_count = 0
 
         for ability in player.abilities:
             if ability.type == "passive" and ability.trigger == "per_turn" and ability.active:
@@ -896,6 +920,7 @@ def combat(player, enemies):
             f"- {player.name} (HP: {player.hp}, {core.Colors.GRAY}Block: {player.block}{core.Colors.RESET}, Energy: {player.energy}"
             + (f", Total_strenght: {player.strenght + player.temporary_strenght}"
                if (player.strenght + player.temporary_strenght) != 0 else "")
+            + (f", Combo: {player.combo_count}"if (player.combo_count) != 0 else "")
             + f"){core.format_status_effects(player)}"
         )
         print("\nNepřátelé:")
@@ -927,7 +952,7 @@ def combat(player, enemies):
                 print(f"Narazil jsi na {len(enemies)} nepřátel")
                 first_turn = False
             else:
-                player.draw(2)
+                player.draw(2 + player.extra_draw)
 
             result = character.Character.player_turn(player, enemies)
 
@@ -1042,19 +1067,118 @@ def combat(player, enemies):
         input("Stiskni cokoliv pro vstup do dalšího kola:")
 
 
+def select_starting_build(player):
+    while True:
+        clear_screen()
+        print("\n\033[94m=== VYBER POSTAVU ZA KTEROU CHCEŠ HRÁT: ===\033[0m")
+        print("1) Voják")
+        print("2) Kultista")
+        print("3) Mág")
+
+        choice = input("> ")
+
+        if choice == "1":
+            clear_screen()
+
+            print_box(
+                "VOJÁK",
+                [
+                    "HP: 20",
+                    "Energie: 2",
+                    "Styl: Silné útoky a blokování poškození",
+                    "Startovní vybavení: meč, štít, vycpávaná zbroj"
+                ],
+                "Účastnící se dlouhé a vyčerpávající války daleko od domova už ani "
+                "nevěřil, že se do něj někdy vrátí. Boje však vyčerpaly zdroje obou "
+                "válčících stran, morálka se zhoršovala a nakonec už ani nebyl nikdo, "
+                "kdo by udával rozkazy. Voják se jako mnoho ostatních rozhodl opustit "
+                "to strašlivé místo a vrátit se domů. Ten však zdaleka nebyl takový, "
+                "jak si jej pamatoval."
+            )
+
+            confirm = input("\nVybrat tuto postavu? (y/n): ")
+            if confirm.lower() == "y":
+                player.max_hp = 20
+                player.hp = 20
+                player.max_energy = 2
+                player.energy = player.max_energy
+                player.extra_draw = 0
+                player.equip_item(gear.sword)
+                player.equip_item(gear.shield)
+                player.equip_item(gear.padded_armor)
+                return
+
+        elif choice == "2":
+            clear_screen()
+
+            print_box(
+                "KULTISTA",
+                [
+                    "HP: 16",
+                    "Energie: 3",
+                    "Styl: Combo, agresivní scaling",
+                    "Startovní vybavení: kultistická čepel, rituální soška"
+                ],
+                "Kultista zasvětil svůj život temným silám, které mu na oplátku "
+                "propůjčily zvláštní schopnosti. Každý útok a rituál ho "
+                "posouvá blíže k moci, ale zároveň dál od lidskosti. V ruinách "
+                "starého světa hledá další oběti i tajemství, která by mohl "
+                "využít ve svůj prospěch."
+            )
+
+            confirm = input("\nVybrat tuto postavu? (y/n): ")
+            if confirm.lower() == "y":
+                player.max_hp = 16
+                player.hp = 16
+                player.max_energy = 3
+                player.energy = player.max_energy
+                player.extra_draw = 0
+                player.equip_item(gear.cultistic_blade)
+                player.equip_item(gear.ritual_statue)
+                return
+
+        elif choice == "3":
+            clear_screen()
+
+            print_box(
+                "MÁG",
+                [
+                    "HP: 14",
+                    "Energie: 2",
+                    "Styl: Ability, manipulace balíčku",
+                    "Startovní bonus: +1 draw"
+                ],
+                "Mágovo jméno bylo kdysi velectěné. Po událostech, na které si však nedokáže vzpomenout, "
+                "byl vyhnán z komnat své věže a zatracen. Nyní bloudí rozpadajícím se světem, "
+                "pátrá po zapomenutém vědění a střípcích své minulosti – v naději, že obnoví svou mysl "
+                "a získá zpět vše, co ztratil."
+            )
+
+            confirm = input("\nVybrat tuto postavu? (y/n): ")
+            if confirm.lower() == "y":
+                player.max_hp = 14
+                player.hp = 14
+                player.max_energy = 2
+                player.energy = player.max_energy
+                player.extra_draw = 1
+                player.equip_item(gear.wooden_staff)
+                return
+
+        else:
+            print("Neplatná volba.")
+
 # ===== MAIN LOOP ========
+clear_screen()
 player = character.Character("Hráč", 20)
+select_starting_build(player)
 player.is_player = True
+player.abilities = []
 player.dungeon_level = 1
 player.fatigue = 0
-player.energy = 2
 player.reduced_energy = 0
+player.combo_count = 0
 player.xp = 0
 player.lvl = 1
-player.abilities = []
-player.equip_item(gear.sword)
-player.equip_item(gear.shield)
-player.equip_item(gear.leather_armor)
 
 game_map = GameMap(24, 20)
 rooms = game_map.generate_dungeon()

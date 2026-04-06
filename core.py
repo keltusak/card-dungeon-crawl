@@ -38,8 +38,9 @@ class Ability:
 
 class Card:
     def __init__(self, name, damage=0, block=0, energy=0, reduce_energy=0, effect=None, effect_chance=1.0,
-                 effect_on_damage=False, lifesteal=0, devour = 0, target_type="enemy",
-                 spawn_enemy=None, spawn_count=0, draw=0, discard=0, buff_strenght=0, cost=1):
+                 effect_on_damage=False, lifesteal=0, devour = 0, target_type="enemy", spawn_enemy=None, 
+                 spawn_count=0, draw=0, discard=0, buff_strenght=0, combo=False, scale=1, cost=1):
+        
         self.name = name
         self.damage = damage
         self.block = block
@@ -56,6 +57,10 @@ class Card:
         self.spawn_enemy = spawn_enemy
         self.spawn_count = spawn_count
         self.buff_strenght = buff_strenght
+
+        self.combo = combo
+        self.scale = scale
+
         self.cost = cost
 
     def get_valid_targets(user, target_type, player, enemies):
@@ -73,16 +78,41 @@ class Card:
 
         elif target_type == "any":
             return [player] + [e for e in enemies if e.hp > 0]
+        
+    def get_damage(self, user):
+        # klasický damage
+        if isinstance(self.damage, int):
+            return self.damage
+
+        if self.damage == "combo":
+            base = getattr(self, "base", 0)
+            scale = getattr(self, "scale", 1)
+            return base + user.combo_count * scale
+
+        return 0
+    
+    def get_draw(self, user):
+        if isinstance(self.draw, int):
+            return self.draw
+
+        if self.draw == "combo":
+            return user.combo_count  # nebo jiná logika
+
+        return 0
 
     def play(self, user, target, enemies_list=None, create_enemy_func=None):
         print(f"{user.name} používá {self.name}")
 
         dmg_done = 0
-        if getattr(self, "damage", 0) > 0:
+        base_damage = self.get_damage(user)
+
+        if base_damage > 0:
             user.attack_cards_played += 1
-            total_damage = self.damage + \
+
+            total_damage = base_damage + \
                 getattr(user, "strenght", 0) + \
                 getattr(user, "temporary_strenght", 0)
+
             dmg_done = target.take_damage(total_damage, attacker=user)
 
             for ability in user.abilities:
@@ -101,6 +131,9 @@ class Card:
                 target.add_block(self.block)
             else:
                 user.add_block(self.block)
+
+        if self.combo:
+            user.combo_count += self.combo
 
         if self.energy:
             user.energy += self.energy
@@ -127,9 +160,10 @@ class Card:
                 print(f"Karta {removed_card.name} byla dočasně odstraněna z {target.name}ova odhazovacího balíčku")
 
 
-        if self.draw > 0:
-            print(f"{user.name} dobral {self.draw} kartu/karty díky {self.name}")
-            user.draw(self.draw)
+        draw_amount = self.get_draw(user)
+        if draw_amount > 0:
+            print(f"{user.name} dobral {draw_amount} kartu/karty díky {self.name}")
+            user.draw(draw_amount)
 
         if self.discard > 0:
             for _ in range(self.discard):
@@ -289,7 +323,23 @@ def print_cards(cards):
         parts = []
 
         if card.damage:
-            parts.append(f"DMG:{card.damage}")
+            if isinstance(card.damage, int):
+                dmg_str = str(card.damage)
+            else:
+                base = getattr(card, "base", 0)
+                scale = getattr(card, "scale", 1)
+
+                if base == 0 and scale == 1:
+                    dmg_str = f"{card.damage}"  # jen typ, např. "combo"
+                elif base == 0:
+                    dmg_str = f"combo*{scale}"
+                elif scale == 0:
+                    dmg_str = f"{base}"
+                else:
+                    dmg_str = f"{base} + combo*{scale}"
+
+            parts.append(f"DMG:{dmg_str}")
+            
         if card.block:
             parts.append(f"BLOCK:{card.block}")
         if card.lifesteal:
@@ -309,7 +359,9 @@ def print_cards(cards):
             parts.append(f"DISCARD:{card.discard}")
         if getattr(card, "target_type", None) == "all_enemies":
             parts.append("AOE")
-        # cenu asi vypsat vždy zatím
+        if card.combo:
+            parts.append(f"COMBO")
+        # cenu vypisovat jako poslední a u všech karet
         parts.append(f"COST:{card.cost}")
 
         stats = ", ".join(parts)
