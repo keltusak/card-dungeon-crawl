@@ -1,6 +1,7 @@
 import random
 import os
 
+
 def clear_screen():
     # Windows
     if os.name == "nt":
@@ -9,6 +10,7 @@ def clear_screen():
     else:
         os.system("clear")
 
+
 class Colors:
     RED = "\033[91m"
     GREEN = "\033[92m"
@@ -16,6 +18,7 @@ class Colors:
     BLUE = "\033[94m"
     GRAY = "\033[90m"
     RESET = "\033[0m"
+
 
 class Ability:
     def __init__(self, name, description, ability_type, active=True, effect=None, trigger="passive", cards=None):
@@ -38,9 +41,9 @@ class Ability:
 
 class Card:
     def __init__(self, name, damage=0, block=0, energy=0, reduce_energy=0, effect=None, effect_chance=1.0,
-                 effect_on_damage=False, lifesteal=0, devour = 0, target_type="enemy", spawn_enemy=None, 
+                 effect_on_damage=False, lifesteal=0, devour=0, target_type="enemy", spawn_enemy=None,
                  spawn_count=0, draw=0, discard=0, buff_strenght=0, combo=False, scale=1, cost=1):
-        
+
         self.name = name
         self.damage = damage
         self.block = block
@@ -78,7 +81,7 @@ class Card:
 
         elif target_type == "any":
             return [player] + [e for e in enemies if e.hp > 0]
-        
+
     def get_damage(self, user):
         # klasický damage
         if isinstance(self.damage, int):
@@ -90,7 +93,7 @@ class Card:
             return base + user.combo_count * scale
 
         return 0
-    
+
     def get_draw(self, user):
         if isinstance(self.draw, int):
             return self.draw
@@ -100,8 +103,16 @@ class Card:
 
         return 0
 
-    def play(self, user, target, enemies_list=None, create_enemy_func=None):
+    def play(self, user, target, enemies_list=None, create_enemy_func=None, player=None):
         print(f"{user.name} používá {self.name}")
+
+        if player and not getattr(user, "is_player", False):
+            # Pokud je user nepřítel a player existuje
+            if user.name not in player.bestiary:
+                # pokud náhodou není, vytvoříme záznam
+                player.bestiary[user.name] = {
+                    "seen": True, "kills": 0, "seen_cards": set()}
+            player.bestiary[user.name]["seen_cards"].add(self.name)
 
         dmg_done = 0
         base_damage = self.get_damage(user)
@@ -151,14 +162,15 @@ class Card:
             user.hp = min(user.max_hp, user.hp + heal_amount)
             print(
                 f"{user.name} se léčí o {heal_amount} HP díky lifestealu (HP: {user.hp})")
-            
-        if self.devour > 0: 
+
+        if self.devour > 0:
             for _ in range(self.devour):
                 if not target.discard:
                     break
-                removed_card = target.discard.pop(random.randint(0, len(target.discard)-1))
-                print(f"Karta {removed_card.name} byla dočasně odstraněna z {target.name}ova odhazovacího balíčku")
-
+                removed_card = target.discard.pop(
+                    random.randint(0, len(target.discard)-1))
+                print(
+                    f"Karta {removed_card.name} byla dočasně odstraněna z {target.name}ova odhazovacího balíčku")
 
         draw_amount = self.get_draw(user)
         if draw_amount > 0:
@@ -207,6 +219,7 @@ class Card:
                     print(
                         f"{self.effect.name} se nepodařilo aplikovat ({int(self.effect_chance*100)}% šance)")
 
+
 def shuffle_deck(deck, shuffler):
     random.shuffle(deck)
     # aplikuj fatigue pouze pokud je shuffler opravdu hráč
@@ -220,6 +233,7 @@ def shuffle_deck(deck, shuffler):
 
         shuffler.fatigue += 1
 
+
 def format_status_effects(character):
     if not character.status_effects:
         return ""
@@ -229,6 +243,7 @@ def format_status_effects(character):
         effects.append(f"{effect.name}({effect.duration})")
 
     return " | " + ", ".join(effects)
+
 
 class Status_Effect:
     def __init__(self, name, duration):
@@ -282,6 +297,7 @@ class Stun(Status_Effect):
     def copy(self):
         return Stun(self.duration)
 
+
 class Thorns(Status_Effect):
     def __init__(self, chance, damage, duration=1):
         super().__init__("Trny", duration)
@@ -293,6 +309,7 @@ class Thorns(Status_Effect):
 
     def copy(self):
         return Thorns(self.chance, self.damage, self.duration)
+
 
 class Dodge(Status_Effect):
     def __init__(self, chance, duration=1):
@@ -339,7 +356,7 @@ def print_cards(cards):
                     dmg_str = f"{base} + combo*{scale}"
 
             parts.append(f"DMG:{dmg_str}")
-            
+
         if card.block:
             parts.append(f"BLOCK:{card.block}")
         if card.lifesteal:
@@ -368,7 +385,6 @@ def print_cards(cards):
         print(f"{i}: {card.name} ({stats})")
 
 
-
 SYNERGIES = [
     {
         "requires": ["Krátký Meč", "Štít s bodcem"],
@@ -379,7 +395,8 @@ SYNERGIES = [
     {
         "requires": ["Řemdich", "Štít"],
         "cards": [
-            Card("Rozmáchnutí zpoza krytu", damage=2, block=1, target_type="all_enemies")
+            Card("Rozmáchnutí zpoza krytu", damage=2,
+                 block=1, target_type="all_enemies")
         ]
     },
     {

@@ -6,13 +6,12 @@ from collections import deque
 import textwrap
 import shutil
 
-#ostatní soubory
+# ostatní soubory
 import core
 import gear
 import abilities
 import character
 import monsters
-
 
 
 def clear_screen():
@@ -23,11 +22,14 @@ def clear_screen():
     else:
         os.system("clear")
 
+
 def get_terminal_width():
     return shutil.get_terminal_size().columns
 
+
 def center_text(text, width):
     return text.center(width)
+
 
 def print_box(title, stats, description, width=60):
     print("=" * width)
@@ -44,6 +46,7 @@ def print_box(title, stats, description, width=60):
         print(line)
 
     print("=" * width)
+
 
 class GameMap:
     def __init__(self, width, height):
@@ -551,7 +554,6 @@ def show_help():
     print("- Můžeš se podívat co jednotlivé vybavená umí")
     print("- Můžeš měnit své aktuálně používané vybavení")
     print("- Můžeš si zde spravovat své naučené schopnosti\n")
-    
 
     print("\033[93mLevly:\033[0m")
     print("- Za porážení nepřátel dostáváš zkušenosti")
@@ -584,6 +586,56 @@ def show_help():
     print("- Studuj nepřátele, každý má svůj vlastní balíček karet\n")
 
     input("Stiskni ENTER pro návrat do hry...")
+
+
+def show_bestiary(player):
+    while True:
+        clear_screen()
+        print("\n=== BESTIÁŘ ===\n")
+
+        enemies = list(player.bestiary.keys())
+
+        for i, name in enumerate(enemies):
+            kills = player.bestiary[name]["kills"]
+            print(f"{i+1}. {name} (Zabit: {kills}x)")
+
+        print("\n1-X: Vyber nepřítele")
+        print("q: Zpět")
+
+        choice = input("\n> ")
+
+        if choice == "q":
+            return
+
+        if choice.isdigit():
+            index = int(choice) - 1
+            if 0 <= index < len(enemies):
+                show_enemy_detail(player, enemies[index])
+        print()
+
+
+def show_enemy_detail(player, enemy_name):
+    clear_screen()
+    data = player.bestiary[enemy_name]
+
+    print(f"\n=== {enemy_name} ===\n")
+    print(f"Zabit: {data['kills']}x\n")
+
+    if data["kills"] >= 1:
+        all_cards = data.get("all_cards", [])
+        seen_cards = data["seen_cards"]
+
+        print(f"Karty ({len(seen_cards)}/{len(all_cards)}):")
+
+        for card in all_cards:
+            if card in seen_cards:
+                print(f" - {card}")
+            else:
+                print(" - ???")
+    else:
+        print("???")
+
+    input("\nENTER pro návrat...")
 
 
 def show_inventory(player):
@@ -845,6 +897,7 @@ def move_player(cmd, x, y, game_map):
     else:
         return new_x, new_y
 
+
 class RectRoom:
     def __init__(self, x, y, w, h):
         self.x1 = x
@@ -862,6 +915,7 @@ class RectRoom:
             self.x1 <= other.x2 and self.x2 >= other.x1 and
             self.y1 <= other.y2 and self.y2 >= other.y1
         )
+
 
 def choose_enemy(enemies):
     alive = []
@@ -887,6 +941,7 @@ def choose_enemy(enemies):
         if 0 <= index < len(alive):
             return alive[index]
 
+
 def combat(player, enemies):
     player.reset_combat()
     for enemy in enemies:
@@ -895,6 +950,15 @@ def combat(player, enemies):
     player.build_deck()
     for enemy in enemies:
         enemy.build_deck()
+
+    for enemy in enemies:
+        if enemy.name not in player.bestiary:
+            player.bestiary[enemy.name] = {
+                "seen": True,
+                "kills": 0,
+                "seen_cards": set(),
+                "all_cards": enemy.all_cards
+            }
 
     first_turn = True
 
@@ -959,6 +1023,9 @@ def combat(player, enemies):
             if result == "enemy_dead":
                 print("Vyhrál jsi!")
                 input("ENTER pro pokračování...")
+                for enemy in enemies:
+                    if enemy.name in player.bestiary:
+                        player.bestiary[enemy.name]["kills"] += 1
                 return True
             elif result == "player_dead":
                 print("Prohrál jsi!")
@@ -1007,7 +1074,8 @@ def combat(player, enemies):
 
             # Zpracování stunu
             if enemy.is_stunned():
-                print(f"{core.Colors.YELLOW}{enemy.name} je omráčen!{core.Colors.RESET}")
+                print(
+                    f"{core.Colors.YELLOW}{enemy.name} je omráčen!{core.Colors.RESET}")
                 enemy.process_status()
                 if enemy.hp <= 0:
                     continue
@@ -1018,7 +1086,7 @@ def combat(player, enemies):
                 continue
 
             if enemy.ai:
-                #nepřátelé s prioritami hraných karet
+                # nepřátelé s prioritami hraných karet
                 enemy.ai(enemy, player, enemies)
             else:
                 # běžní nepřátelé
@@ -1035,7 +1103,8 @@ def combat(player, enemies):
                         target = enemy
                     elif card.target_type == "ally":
 
-                        allies = [e for e in enemies if e.hp > 0 and e != enemy]
+                        allies = [e for e in enemies if e.hp >
+                                  0 and e != enemy]
                         if allies:
                             target = random.choice(allies)
                         else:
@@ -1047,7 +1116,8 @@ def combat(player, enemies):
                         index,
                         target=target,
                         enemies_list=enemies,
-                        create_enemy_func=monsters.create_enemy_by_name
+                        create_enemy_func=monsters.create_enemy_by_name,
+                        player=player
                     )
 
             if player.hp <= 0:
@@ -1058,6 +1128,9 @@ def combat(player, enemies):
         if all(enemy.hp <= 0 for enemy in enemies):
             print("Vyhrál jsi!")
             input("ENTER pro pokračování...")
+            for enemy in enemies:
+                if enemy.name in player.bestiary:
+                    player.bestiary[enemy.name]["kills"] += 1
             return True
 
         for ability in player.abilities:
@@ -1167,6 +1240,7 @@ def select_starting_build(player):
         else:
             print("Neplatná volba.")
 
+
 # ===== MAIN LOOP ========
 clear_screen()
 player = character.Character("Hráč", 20)
@@ -1197,12 +1271,16 @@ while player.hp > 0:
     print(
         f"\nHP: {player.hp}/{player.max_hp}, XP: {player.xp}, LVL: {player.lvl}, Dungeon lvl: {player.dungeon_level}")
 
-    cmd = input("\nPohyb (WASD, q = konec, i = inventář, h = help): ").lower()
+    cmd = input(
+        "\nPohyb (WASD, q = konec, i = inventář, b = besiař, h = help): ").lower()
 
     if cmd == "q":
         break
     elif cmd == "i":
         show_inventory(player)
+        continue
+    elif cmd == "b":
+        show_bestiary(player)
         continue
     elif cmd == "h":
         show_help()

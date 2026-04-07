@@ -2,7 +2,8 @@ import gear
 import core
 import abilities
 import character
-import random 
+import random
+
 
 def create_enemy_by_name(name):
     enemy_types = {
@@ -82,6 +83,7 @@ def create_enemy_by_name(name):
 
     enemy.actions = template.get("actions", 1)
     enemy.ai = template.get("ai", None)
+    enemy.all_cards = list(set(card.name for card in enemy.deck))
 
     return enemy
 
@@ -91,7 +93,8 @@ def create_enemy_group(dungeon_level=1):
         {"type": "komáři", "enemies": [
             ("Obří komár", 2, 3)], "levels": [1, 2]},
         {"type": "goblini", "enemies": [("Goblin", 1, 2)], "levels": [1]},
-        {"type": "bandití výběrčí", "enemies": [("Štítonoš", 1, 2)], "levels": [1, 2]},
+        {"type": "bandití výběrčí", "enemies": [
+            ("Štítonoš", 1, 2)], "levels": [1, 2]},
         {"type": "vrazi", "enemies": [("Vrah", 1, 2)], "levels": [1]},
         {"type": "mravenci", "enemies": [
             ("Mraveniště", 1, 1)], "levels": [1, 2]},
@@ -109,7 +112,7 @@ def create_enemy_group(dungeon_level=1):
         {"type": "lovící pavouk", "enemies": [
             ("Pavouk s vejcem", 1, 1)], "levels": [3, 4]},
         {"type": "Goblinní havěť", "enemies": [
-            ("Goblinní zvěd", 1, 1),("Žrout", 2, 3)], "levels": [3]},
+            ("Goblinní zvěd", 1, 1), ("Žrout", 2, 3)], "levels": [3]},
         {"type": "zuřivý medvěd", "enemies": [
             ("Černý medvěd", 1, 1)], "levels": [3, 4]},
         # od lvl 4
@@ -117,7 +120,7 @@ def create_enemy_group(dungeon_level=1):
             ("Goblinní válečník", 1, 1), ("Goblin", 1, 2), ("Žrout", 1, 2)], "levels": [4]},
         {"type": "les", "enemies": [
             ("Živoucí strom", 1, 1),], "levels": [4]},
-        
+
     ]
 
     possible_encounters = [
@@ -154,10 +157,12 @@ def spider_ai(enemy, player, enemies):
         index,
         target=player,
         enemies_list=enemies,
-        create_enemy_func=create_enemy_by_name
+        create_enemy_func=create_enemy_by_name,
+        player=player
     )
 
     enemy.discard_hand()
+
 
 def choose_spider_card(enemy, player):
     hand = enemy.hand
@@ -171,7 +176,7 @@ def choose_spider_card(enemy, player):
     for i, card in enumerate(hand):
         if card.name == "Vylíhnutí":
             return i
-        
+
     if not player_has_block:
         for i, card in enumerate(hand):
             if card.name == "Paralizující kousnutí":

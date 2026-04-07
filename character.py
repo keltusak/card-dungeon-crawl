@@ -2,6 +2,7 @@ import random
 import core
 from core import Colors, clear_screen, shuffle_deck, format_status_effects
 
+
 class Character:
     def __init__(self, name, hp, strenght=0, temporary_strenght=0, max_energy=2):
         self.name = name
@@ -9,7 +10,7 @@ class Character:
         self.hp = hp
         self.strenght = strenght
         self.temporary_strenght = temporary_strenght
-        
+
         self.saved_block = 0
         self.combo_count = 0
         self.energy = max_energy
@@ -17,6 +18,8 @@ class Character:
         self.block = 0
         self.abilities = []
         self.status_effects = []
+
+        self.bestiary = {}
 
         # pomocné proměnné pro ability
         self.attack_cards_played = 0
@@ -98,12 +101,17 @@ class Character:
                 self.hp = 0
         self.fatigue += 1
 
-    def play_card(self, index, target=None, enemies_list=None, create_enemy_func=None):
+    def play_card(self, index, target=None, enemies_list=None, create_enemy_func=None, player=None):
         if 0 <= index < len(self.hand):
             card = self.hand.pop(index)
             # předáme všechny potřebné argumenty kartě
-            card.play(user=self, target=target, enemies_list=enemies_list,
-                      create_enemy_func=create_enemy_func)
+            card.play(
+                user=self,
+                target=target,
+                enemies_list=enemies_list,
+                create_enemy_func=create_enemy_func,
+                player=player
+            )
             self.discard.append(card)
         else:
             print("Neplatný index karty")
@@ -120,24 +128,26 @@ class Character:
             reduced = amount
             self.hp -= amount
             if not suppress_print:
-                print(f"{Colors.RED}{self.name} dostal {amount} dmg (ignoruje armor) (HP: {self.hp}{Colors.RESET})")
+                print(
+                    f"{Colors.RED}{self.name} dostal {amount} dmg (ignoruje armor) (HP: {self.hp}{Colors.RESET})")
         else:
             reduced = max(amount - self.block, 0)
             self.block = max(self.block - amount, 0)
             self.hp -= reduced
 
             if not suppress_print:
-                print(f"{Colors.RED}{self.name} dostal {reduced} dmg (HP: {self.hp}{Colors.RESET})")
+                print(
+                    f"{Colors.RED}{self.name} dostal {reduced} dmg (HP: {self.hp}{Colors.RESET})")
 
         if attacker and reduced > 0:
             for effect in self.status_effects:
                 if isinstance(effect, core.Thorns):
                     if random.random() < effect.chance:
                         attacker.hp -= effect.damage
-                        #attacker.take_damage(effect.damage, suppress_print=True)
+                        # attacker.take_damage(effect.damage, suppress_print=True)
                         if not suppress_print:
-                            print(f"{Colors.RED}{attacker.name} se při útoku poranil a dostal {effect.damage} dmg (HP: {attacker.hp}{Colors.RESET})")
-
+                            print(
+                                f"{Colors.RED}{attacker.name} se při útoku poranil a dostal {effect.damage} dmg (HP: {attacker.hp}{Colors.RESET})")
 
         return reduced
 
@@ -345,4 +355,3 @@ def choose_enemy(enemies):
 
         if 0 <= index < len(alive):
             return alive[index]
-
