@@ -96,9 +96,9 @@ class Character:
         if self.fatigue > 0:
             print(f"{self.name} cítí únavu a ztrácí {self.fatigue} HP!")
             input("ENTER pro pokračování...")
-            self.hp -= self.fatigue
-            if self.hp < 0:
-                self.hp = 0
+            self.take_damage(self.fatigue, ignore_armor=True,
+                             suppress_print=True)
+
         self.fatigue += 1
 
     def play_card(self, index, target=None, enemies_list=None, create_enemy_func=None, player=None):
@@ -296,11 +296,16 @@ class Character:
                 player.play_card(index, player)
 
             elif card.target_type == "all_enemies":
+                card_to_play = player.hand.pop(index)
                 for e in enemies:
                     if e.hp > 0:
-                        card.play(player, e)
-                player.hand.pop(index)
-                player.discard.append(card)
+                        card_to_play.play(
+                            user=player,
+                            target=e,
+                            enemies_list=enemies,
+                            player=player
+                        )
+                player.discard.append(card_to_play)
 
             player.energy -= card.cost
 

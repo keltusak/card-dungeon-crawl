@@ -40,12 +40,13 @@ class Ability:
 
 
 class Card:
-    def __init__(self, name, damage=0, block=0, energy=0, reduce_energy=0, effect=None, effect_chance=1.0,
+    def __init__(self, name, damage=0, self_damage=0, block=0, energy=0, reduce_energy=0, effect=None, effect_chance=1.0,
                  effect_on_damage=False, lifesteal=0, devour=0, target_type="enemy", spawn_enemy=None,
-                 spawn_count=0, draw=0, discard=0, buff_strenght=0, combo=False, scale=1, cost=1):
+                 spawn_count=0, draw=0, discard=0, buff_strenght=0, combo=0, scale=1, base=0, cost=1):
 
         self.name = name
         self.damage = damage
+        self.self_damage = self_damage
         self.block = block
         self.energy = energy
         self.reduce_energy = reduce_energy
@@ -63,6 +64,7 @@ class Card:
 
         self.combo = combo
         self.scale = scale
+        self.base = base
 
         self.cost = cost
 
@@ -103,13 +105,11 @@ class Card:
 
         return 0
 
-    def play(self, user, target, enemies_list=None, create_enemy_func=None, player=None):
+    def play(self, user, target, enemies_list=None, create_enemy_func=None, player=None, aoe=False):
         print(f"{user.name} používá {self.name}")
 
         if player and not getattr(user, "is_player", False):
-            # Pokud je user nepřítel a player existuje
             if user.name not in player.bestiary:
-                # pokud náhodou není, vytvoříme záznam
                 player.bestiary[user.name] = {
                     "seen": True, "kills": 0, "seen_cards": set()}
             player.bestiary[user.name]["seen_cards"].add(self.name)
@@ -129,6 +129,11 @@ class Card:
             for ability in user.abilities:
                 if ability.type == "passive" and ability.trigger == "on_attack_played" and ability.active:
                     ability.effect(user)
+
+        if self.self_damage:
+            user.hp -= self.self_damage
+            print(
+                f"{Colors.RED}{user.name} si způsobil zranění za {self.self_damage} (HP: {user.hp}{Colors.RESET})")
 
         if self.spawn_enemy and enemies_list is not None and create_enemy_func is not None:
             for _ in range(self.spawn_count):
@@ -177,13 +182,18 @@ class Card:
             print(f"{user.name} dobral {draw_amount} kartu/karty díky {self.name}")
             user.draw(draw_amount)
 
-        if self.discard > 0:
+        if self.discard > 0 and not aoe:
+            if not user.hand:
+                print("Nemáš žádné karty k zahození.")
+                return
+
             for _ in range(self.discard):
                 if not user.hand:
+                    print("Došly ti karty k zahození.")
                     break
 
                 print("\nAktuální ruka:")
-                print_cards(user.hand)  # <-- tady nahradíme výpis názvů
+                print_cards(user.hand)
 
                 while True:
                     choice = input(
@@ -356,7 +366,8 @@ def print_cards(cards):
                     dmg_str = f"{base} + combo*{scale}"
 
             parts.append(f"DMG:{dmg_str}")
-
+        if card.self_damage:
+            parts.append(f"SELF DMG:{card.self_damage}")
         if card.block:
             parts.append(f"BLOCK:{card.block}")
         if card.lifesteal:
@@ -377,8 +388,7 @@ def print_cards(cards):
         if getattr(card, "target_type", None) == "all_enemies":
             parts.append("AOE")
         if card.combo:
-            parts.append(f"COMBO")
-        # cenu vypisovat jako poslední a u všech karet
+            parts.append(f"COMBO:{card.combo}")
         parts.append(f"COST:{card.cost}")
 
         stats = ", ".join(parts)

@@ -48,6 +48,15 @@ def print_box(title, stats, description, width=60):
     print("=" * width)
 
 
+def print_section(title, text, width=60):
+    print("\n" + title.upper().center(width))
+    print("-" * width)
+
+    wrapped = textwrap.wrap(text, width)
+    for line in wrapped:
+        print(line)
+
+
 class GameMap:
     def __init__(self, width, height):
         self.width = width
@@ -522,7 +531,9 @@ class GameMap:
                     gear.battle_axe, gear.battle_plans, gear.mace
                 ],
                 "kultistka": [
-
+                    gear.bloodthirsty_tongue, gear.blade_of_blood_frenzy, gear.blood_vial,
+                    gear.serpent_spear, gear.ritual_sickle, gear.claw_dagger, gear.sacrificial_blade,
+                    gear.sacrificial_bone, gear.forbidden_texts
                 ],
                 "mag": [
                 ]
@@ -574,6 +585,16 @@ def show_help():
     print("- Můžeš měnit své aktuálně používané vybavení")
     print("- Můžeš si zde spravovat své naučené schopnosti\n")
 
+    print("\033[93mSouboj:\033[0m")
+    print("- V souboji hraješ se svým balíčkem, který obsahuje karty,\n"
+          "dané tvým akutálním vybavením a aktivními schopnostmi.")
+    print("- Po vyčerpání energie je tah předán nepříteli, který také má svůj balíček.")
+    print("- Boj pokračuje dokud jedna ze stran není úplně poražena")
+    print("- Každá zahrátá karta je odložena na odhazovací balíček, který je domíchán, jakmile\n"
+          "dobereš svůj balíček.")
+    print("- Kdykoliv zamícháš v boji odhazovací balíček, je v rámci souboje tvojí postavě přidána únava.\n"
+          "Při každém zamíchání tvoje postavautrpí zranění ve výši tvé únavy.\n")
+
     print("\033[93mLevly:\033[0m")
     print("- Za porážení nepřátel dostáváš zkušenosti")
     print("- Při postupu na novou úroveň se zvýší tvé dosavadní maximální zdraví a")
@@ -589,20 +610,20 @@ def show_help():
     print("- Omráčení (Stun) - jednotka vynechá tah")
     print("- Úhyb (Dodge) - šance vyhnout se útoku")
     print("- Otrava (Poison) - poškození v průběhu několika kol")
-    print("- Trny - útok na toho kdo má tento efekt, útočníkovi způsobí zranění\n")
+    print("- Trny - útok na toho, kdo má tento efekt, útočníkovi způsobí zranění\n")
 
     print("\033[93mSynergie:\033[0m")
     print("- Když používáš určité kombinace vybavení, získáš bonusové karty")
     print("- Např. 'Krátký Meč + Štít' = karta 'Útok a kryt'\n")
 
     print("\033[93mCíl hry:\033[0m")
-    print("- Zlepšuj svůj deck")
-    print("- Hledej vstupy do dalších levlů\n")
+    print("- Zlepšuj svůj deck s pomocí silnějšího vybavení")
+    print("- Hledej vstupy do dalších částí mapy a levlů\n")
 
     print("\033[93mTipy:\033[0m")
     print("- Chytře využívej svou energii na daný tah")
-    print("- Kombinuj vybavení pro silnější synergie")
-    print("- Studuj nepřátele, každý má svůj vlastní balíček karet\n")
+    print("- Kombinuj vybavení pro odalování sinergií")
+    print("- Studuj nepřátele, každý má svůj vlastní balíček karet a ti silnější dokonce i strategie\n")
 
     input("Stiskni ENTER pro návrat do hry...")
 
@@ -618,9 +639,7 @@ def show_bestiary(player):
             kills = player.bestiary[name]["kills"]
             print(f"{i+1}. {name} (Zabit: {kills}x)")
 
-        print("\n1-X: Vyber nepřítele")
-        print("q: Zpět")
-
+        print("\n(Vyber nepřítele = 1-X, q = zpět): ")
         choice = input("\n> ")
 
         if choice == "q":
@@ -637,22 +656,41 @@ def show_enemy_detail(player, enemy_name):
     clear_screen()
     data = player.bestiary[enemy_name]
 
-    print(f"\n=== {enemy_name} ===\n")
-    print(f"Zabit: {data['kills']}x\n")
+    kills = data['kills']
+    info = data['info']
 
-    if data["kills"] >= 1:
-        all_cards = data.get("all_cards", [])
-        seen_cards = data["seen_cards"]
+    print(f"\n=== {enemy_name} ===")
+    print(f"Zabit: {kills}x\n")
 
+    all_cards = data.get("all_cards", [])
+    seen_cards = data["seen_cards"]
+
+    if kills >= 1:
         print(f"Karty ({len(seen_cards)}/{len(all_cards)}):")
-
         for card in all_cards:
             if card in seen_cards:
                 print(f" - {card}")
             else:
                 print(" - ???")
     else:
-        print("???")
+        print("\n???")
+
+    if kills >= 1:
+        print_section("Popis", info.get('description', '???'))
+
+    if kills >= 3:
+        print_section("Lore", info.get('lore', '???'))
+    else:
+        print("\nLORE".center(60))
+        print("-" * 60)
+        print("??? (zabij více nepřátel)")
+
+    if kills >= 6:
+        print_section("Extra lore", info.get('extra_lore', '???'))
+    else:
+        print("\nEXTRA LORE".center(60))
+        print("-" * 60)
+        print("??? (zabij více nepřátel)")
 
     input("\nENTER pro návrat...")
 
@@ -976,7 +1014,12 @@ def combat(player, enemies):
                 "seen": True,
                 "kills": 0,
                 "seen_cards": set(),
-                "all_cards": enemy.all_cards
+                "all_cards": enemy.all_cards,
+                "info": {
+                    "description": enemy.description,
+                    "lore": enemy.lore,
+                    "extra_lore": enemy.extra_lore
+                }
             }
 
     first_turn = True
@@ -1036,10 +1079,19 @@ def combat(player, enemies):
                 first_turn = False
             else:
                 player.draw(2 + player.extra_draw)
+                if player.hp <= 0:
+                    print("Prohrál jsi!")
+                    input("ENTER pro pokračování...")
+                    return False
 
             result = character.Character.player_turn(player, enemies)
 
-            if result == "enemy_dead":
+            if player.hp <= 0:
+                print("Prohrál jsi!")
+                input("ENTER pro pokračování...")
+                return False
+
+            elif result == "enemy_dead":
                 print("Vyhrál jsi!")
                 input("ENTER pro pokračování...")
                 for enemy in enemies:
@@ -1178,7 +1230,7 @@ def select_starting_build(player):
                     "HP: 20",
                     "Energie: 2",
                     "Styl: Silné útoky a blokování poškození",
-                    "Startovní vybavení: meč, štít, vycpávaná zbroj"
+                    "Startovní vybavení: Krátký meč, Štít, Vycpávaná zbroj"
                 ],
                 "Účastnící se dlouhé a vyčerpávající války daleko od domova už ani "
                 "nevěřil, že se do něj někdy vrátí. Boje však vyčerpaly zdroje obou "
@@ -1205,17 +1257,17 @@ def select_starting_build(player):
             clear_screen()
 
             print_box(
-                "KULTISTA",
+                "KULTISTKA",
                 [
                     "HP: 16",
                     "Energie: 3",
                     "Styl: Combo, agresivní scaling",
-                    "Startovní vybavení: kultistická čepel, rituální soška"
+                    "Startovní vybavení: Kultistická čepel, Rituální soška, Rituální suknice"
                 ],
-                "Kultista zasvětil svůj život temným silám, které mu na oplátku "
-                "propůjčily zvláštní schopnosti. Každý útok a rituál ho "
+                "Kultistka zasvětila svůj život temným silám, které jí na oplátku "
+                "propůjčily zvláštní schopnosti. Každý útok a rituál ji "
                 "posouvá blíže k moci, ale zároveň dál od lidskosti. V ruinách "
-                "starého světa hledá další oběti i tajemství, která by mohl "
+                "starého světa hledá další oběti i tajemství, která by mohla "
                 "využít ve svůj prospěch."
             )
 
@@ -1228,6 +1280,7 @@ def select_starting_build(player):
                 player.extra_draw = 0
                 player.equip_item(gear.cultistic_blade)
                 player.equip_item(gear.ritual_statue)
+                player.equip_item(gear.ritual_skirt)
                 player.player_class = "kultistka"
                 return
 
@@ -1240,6 +1293,7 @@ def select_starting_build(player):
                     "HP: 14",
                     "Energie: 2",
                     "Styl: Ability, manipulace balíčku",
+                    "Startovní vybavení: Dřevěná hůl, Stará róba, Bezejmená kniha",
                     "Startovní bonus: +1 draw"
                 ],
                 "Mágovo jméno bylo kdysi velectěné. Po událostech, na které si však nedokáže vzpomenout, "
@@ -1256,7 +1310,10 @@ def select_starting_build(player):
                 player.energy = player.max_energy
                 player.extra_draw = 1
                 player.equip_item(gear.wooden_staff)
+                player.equip_item(gear.an_untitled_book)
+                player.equip_item(gear.old_robe)
                 player.player_class = "mag"
+
                 return
 
         else:
@@ -1294,7 +1351,7 @@ while player.hp > 0:
         f"\nHP: {player.hp}/{player.max_hp}, XP: {player.xp}, LVL: {player.lvl}, Dungeon lvl: {player.dungeon_level}")
 
     cmd = input(
-        "\nPohyb (WASD, q = konec, i = inventář, b = besiař, h = help): ").lower()
+        "\n(Pohyb = WASD, q = konec, i = inventář, b = besiař, h = help): ").lower()
 
     if cmd == "q":
         break
@@ -1329,7 +1386,6 @@ while player.hp > 0:
 
     if status == "player_dead":
         print("Konec hry")
-        input("ENTER pro pokračování...")
         break
 
     if status == "enemy_dead":

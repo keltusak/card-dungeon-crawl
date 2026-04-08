@@ -10,27 +10,86 @@ def create_enemy_by_name(name):
         "Goblin": {
             "hp": 12,
             "equipment": [gear.broken_sword],
+            "description": "Malý humanoid známý svou zákeřností.",
+            "lore": (
+                "Gobliní kmeny přežívají v lese a obvykle je vede nějaký šaman či silný válečník. "
+                "Když se jejich kmeni daří, vydávají se na výpravy, přepadávat a plenit."
+            ),
+            "extra_lore": (
+                "Goblini jsou často využíváni jako levná bojová síla, protože k získání jejich respektu "
+                "není třeba mnoho. Pokud nestačí vize boje a zisku cenností, zastrašování je učinná alternativa."
+            ),
         },
+
         "Vrah": {
             "hp": 10,
             "equipment": [gear.poison_dagger],
+            "description": "Zákeřný bandita, který útočí ze zálohy.",
+            "lore": (
+                "Tihle zabijáci se potulují lesy a číhají na osamělé cestovatele. "
+                "Nepatří k žádnému řádu - zabíjejí pro kořist a vlastní přežití."
+            ),
+            "extra_lore": (
+                "Někteří z nich si značí své oběti drobnými řezy, jako by šlo o podivný rituál. "
+                "Není jasné, zda jde jen o zvyk, nebo o něco temnějšího."
+            ),
         },
+
         "Štítonoš": {
             "hp": 15,
             "equipment": [gear.broken_sword, gear.shield_e],
             "abilities": [abilities.maintaining_defense],
+            "description": "Drsný výběrčí mýta se štítem a zbrojí.",
+            "lore": (
+                "Štítonoši stojí na cestách a nutí poutníky platit za průchod. "
+                "Kdo odmítne, rychle pozná sílu jejich štítu i meče."
+            ),
+            "extra_lore": (
+                "Mnozí z nich bývali vojáky, kteří po válce nenašli jiné uplatnění. "
+                "Jejich výstroj je často poslední připomínkou dávné služby."
+            ),
         },
+
         "Lovec lidí": {
             "hp": 13,
             "equipment": [gear.short_bow, gear.set_of_traps],
+            "description": "Stopař, který loví jiné lidi jako kořist.",
+            "lore": (
+                "Lovci lidí se pohybují na okrajích civilizace a sledují své cíle celé dny. "
+                "Používají pasti a útoky ze zálohy, aby měli jistotu úspěchu."
+            ),
+            "extra_lore": (
+                "Někteří si vedou záznamy o svých úlovcích - rytiny na zbraních nebo kůži. "
+                "Čím více značek, tím větší respekt mezi ostatními lovci."
+            ),
         },
+
         "Obří komár": {
             "hp": 5,
             "equipment": [gear.proboscis, gear.wings],
+            "description": "Přerostlý hmyz lačnící po krvi.",
+            "lore": (
+                "Tito komáři se množí v temných a vlhkých oblastech. "
+                "Jejich bodnutí je nepříjemné a často nebezpečné."
+            ),
+            "extra_lore": (
+                "Říká se, že někteří byli zmutováni temnou magií. "
+                "Jejich krev může mít zvláštní účinky, pokud je správně zpracována."
+            ),
         },
+
         "Mraveniště": {
             "hp": 14,
             "equipment": [gear.ant_queen],
+            "description": "Centrum kolonie, odkud proudí nekonečný zástup mravenců.",
+            "lore": (
+                "Mraveniště ukrývá královnu a tisíce dělníků připravených bránit svůj domov. "
+                "Narušení kolonie vede k okamžité reakci."
+            ),
+            "extra_lore": (
+                "Starší kolonie dokážou prorůstat hluboko pod zemí. "
+                "Některé prý sahají až do zapomenutých ruin, kde se mění v něco mnohem nebezpečnějšího."
+            ),
         },
         "Mravenec": {
             "hp": 1,
@@ -83,7 +142,11 @@ def create_enemy_by_name(name):
 
     enemy.actions = template.get("actions", 1)
     enemy.ai = template.get("ai", None)
+
     enemy.all_cards = list(set(card.name for card in enemy.deck))
+    enemy.description = template.get("description", "")
+    enemy.lore = template.get("lore", "")
+    enemy.extra_lore = template.get("extra_lore", "")
 
     return enemy
 
