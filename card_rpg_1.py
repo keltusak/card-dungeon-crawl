@@ -508,11 +508,30 @@ class GameMap:
             game_map.grid[y][x] = "."
 
         elif tile == "▣":
-            loot_options = [gear.ring_of_defense, gear.abakus, gear.madmans_eye, gear.war_paints,
-                            gear.wurm_ring, gear.poisoners_ring, gear.ring_with_needle, gear.dagger,
-                            gear.shield_with_spike, gear.caltrops, gear.flail, gear.rabits_paw, gear.battle_axe,
-                            gear.mace, gear.battle_plans]
-            loot = random.choice(loot_options)
+            UNIVERSAL_LOOT = [
+                gear.ring_of_defense, gear.wurm_ring,
+                gear.rabits_paw, gear.abakus, gear.madmans_eye,
+                gear.poisoners_ring, gear.ring_with_needle,
+                gear.caltrops, gear.dagger
+
+            ]
+
+            CLASS_LOOT = {
+                "vojak": [
+                    gear.shield_with_spike, gear.flail, gear.war_paints,
+                    gear.battle_axe, gear.battle_plans, gear.mace
+                ],
+                "kultistka": [
+
+                ],
+                "mag": [
+                ]
+            }
+
+            player_pool = CLASS_LOOT.get(player.player_class, [])
+            combined_pool = player_pool + UNIVERSAL_LOOT
+
+            loot = random.choice(combined_pool)
             player.inventory.append(loot)
             messages.append(f"Otevřel jsi truhlu a našel: {loot.name}")
             game_map.grid[y][x] = "."
@@ -1179,6 +1198,7 @@ def select_starting_build(player):
                 player.equip_item(gear.sword)
                 player.equip_item(gear.shield)
                 player.equip_item(gear.padded_armor)
+                player.player_class = "vojak"
                 return
 
         elif choice == "2":
@@ -1208,6 +1228,7 @@ def select_starting_build(player):
                 player.extra_draw = 0
                 player.equip_item(gear.cultistic_blade)
                 player.equip_item(gear.ritual_statue)
+                player.player_class = "kultistka"
                 return
 
         elif choice == "3":
@@ -1235,6 +1256,7 @@ def select_starting_build(player):
                 player.energy = player.max_energy
                 player.extra_draw = 1
                 player.equip_item(gear.wooden_staff)
+                player.player_class = "mag"
                 return
 
         else:

@@ -66,6 +66,63 @@ cultistic_blade = Equipment("Kultistovo ostří", "hand", [
     Card("Rituál", damage=2, energy=1, combo=True, target_type="self", cost=0),
     Card("Setnutí", damage="combo", scale=2),
 ])
+# ====== nové karty k přidání do aktuální verze pro Kultistku a Mága =======
+bloodthirsty_tongue = Equipment("Krvežíznivý jazyk", "hand", [
+    Card("Zářez", damage=2, combo=1 ),
+    Card("Sátí", damage=2, lifesteal=1, combo=1 ),
+    Card("Krvavá daň", self_damage=3, combo=3, cost=0),
+    Card("Žízeň", damage="combo", lifesteal=1, scale=1, cost=2)
+])
+
+claw_dagger = Equipment("Dýka z drápu", "hand", [
+    Card("Bodnutí", damage=3, combo=1),
+    Card("Rituál", damage=1, energy=1, combo=1, target_type="self", cost=0),
+])
+
+sacrificial_blade = Equipment("Obětní čepel", "hand", [
+    Card("Řez do masa", damage=3, combo=1),
+    Card("Krvavý rituál", self_damage=2, energy=2, combo=1, cost=0),
+    Card("Bolestné probuzení", self_damage=3, draw=2, combo=2, cost=0),
+    Card("Masakr", damage="combo", scale=2)
+])
+
+blade_of_blood_frenzy = Equipment("Čepel krvavého šílenství", "hand", [
+    Card("Škrábanec", damage=1, combo=1, cost=0),
+    Card("Zuřivý sled", damage=2, combo=2),
+    Card("Zrychlený puls", energy=1, combo=2, target_type="self", cost=0),
+    Card("Vyvrcholení", damage="combo", scale=2)
+])
+
+forbidden_texts = Equipment("Zakázané texty", "hand", [
+    Card("Zakázaná slova", draw=2, combo=1),
+    Card("Šepot", draw=1, discard=1, combo=1, target_type="self", cost=0),
+    Card("Ztráta rozumu", self_damage=2, draw=3, combo=2),
+    Card("Kolaps mysli", damage="combo", scale=2)
+])
+
+ritual_sickle = Equipment("Obřadní srp", "hand", [
+    Card("Zářez", damage=2, combo=1),
+    Card("Zářez", damage=2, combo=1),
+    Card("Krvavý rituál", self_damage=2, combo=3, cost=0),
+    Card("Sklizeň", damage="combo", lifesteal=0.5),
+    Card("Krvavá žeň", damage="combo", scale=2, cost=2),
+], two_handed=True)
+
+serpent_spear = Equipment("Oštěp hadí bohyně", "hand", [
+    Card("Jedovaté bodnutí", damage=2, combo=1, effect=Poison(2, 2), effect_on_damage=True),
+    Card("Hadí tanec", combo=2, target_type="self", cost=0),
+    Card("Uštknutí", damage=3, combo=1, effect=Poison(2, 2), effect_on_damage=True),
+    Card("Hadí postoj", block=3, combo=1, effect=Thorns(1,3,1), target_type="self"),
+    Card("Smrtící dávka", damage="combo", scale=2, cost=2),
+], two_handed=True)
+
+blood_vial = Equipment("Ampule s krví", "pocket", [
+    Card("Vypití krve", self_damage=1, combo=2, cost=0),
+])
+
+sacrificial_bone = Equipment("Obětní kost", "belt", [
+    Card("Vzpomínka na bolest", combo=3, cost=1, target_type="self"),
+])
 
 # ===== Štíty =====
 
