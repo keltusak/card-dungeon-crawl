@@ -265,3 +265,129 @@ def choose_spider_card(enemy, player):
             return i
 
     return random.randint(0, len(hand) - 1)
+
+
+def create_boss_by_name(name):
+    boss_types = {
+        "Král Goblinů": {
+            "hp": 45,
+            "equipment": [gear.goblin_crown, gear.chiefs_cutter, gear.shiny_throne],
+            "abilities": [abilities.maintaining_defense],
+            "description": "Vládce goblinů, známý svou silou, smyslem pro strategii a podlostí.",
+            "lore": "Král Goblinů sjednotil všechny gobliní kmeny pod svou vládou."
+        },
+        "Temný Šaman": {
+            "hp": 35,
+            "equipment": [gear.wooden_staff, gear.bloodthirsty_tongue],
+            "abilities": [],
+            "actions": 2,
+            "description": "Mocný mág ovládající temnou magii.",
+            "lore": "Tento mocný šaman žije v hlubinách lesa a shromažďuje duše těch, kteří se v něm stratí. Svými temnými silami přetváří les k obrazu svému."
+        },
+        # přidej další bossy podle potřeby
+    }
+
+    template = boss_types[name]
+
+    boss = character.Character(name, template["hp"])
+
+    for item in template["equipment"]:
+        boss.equip_item(item, suppress_print=True)
+    boss.build_deck()
+
+    boss.all_cards = list(set(card.name for card in boss.deck))
+
+    for ability in template.get("abilities", []):
+        ability.apply(boss)
+
+    boss.actions = template.get("actions", 1)
+    boss.ai = template.get("ai", None)
+
+    boss.description = template.get("description", "")
+    boss.lore = template.get("lore", "")
+    boss.extra_lore = template.get("extra_lore", "")
+
+    return boss
+
+
+def create_boss_group(dungeon_level=1):
+    boss_encounters = [
+        {"name": "Král Goblinů", "levels": [2, 5]},
+        # {"name": "Temný Šaman", "levels": [2, 5]},
+        # přidej další bossy a levely
+    ]
+
+    possible_bosses = [
+        b for b in boss_encounters if dungeon_level in b["levels"]]
+    if not possible_bosses:
+        raise ValueError(
+            f"Pro dungeon level {dungeon_level} nejsou definovaní žádní bossové.")
+
+    chosen_boss = random.choice(possible_bosses)
+    boss = create_boss_by_name(chosen_boss["name"])
+
+    print(f"Narazil jsi na bosse: {boss.name}!")
+    input("ENTER pro pokračování...")
+
+    return [boss]
+
+
+def goblin_king_ai(enemy, player, enemies):
+    enemy.draw(3)
+
+    if not enemy.hand:
+        return
+
+    player_hp = player.hp
+    player_block = player.block
+    enemy_hp = enemy.hp
+    enemy_max_hp = enemy.max_hp
+
+    chosen_index = None
+
+    for i, card in enumerate(enemy.hand):
+        if card.damage and card.damage >= player_hp - player_block:
+            chosen_index = i
+            break
+
+    if chosen_index is None and enemy_hp > enemy_max_hp // 2:
+        for i, card in enumerate(enemy.hand):
+            if card.spawn_enemy:
+                chosen_index = i
+                break
+
+    if chosen_index is None and enemy_hp <= enemy_max_hp // 2:
+        for i, card in enumerate(enemy.hand):
+            if card.block:
+                chosen_index = i
+                break
+
+    for i, card in enumerate(enemy.hand):
+        if card.name == "Pokřiování rozkazů" and len([e for e in enemies if e.hp > 0]) > 1:
+            return i
+
+    if chosen_index is None and enemy.block > 0:
+        for i, card in enumerate(enemy.hand):
+            if card.spawn_enemy:
+                chosen_index = i
+                break
+
+    if chosen_index is None:
+        for i, card in enumerate(enemy.hand):
+            if card.damage:
+                chosen_index = i
+                break
+
+    if chosen_index is None:
+        chosen_index = random.randint(0, len(enemy.hand) - 1)
+
+    # ----------- zahraj kartu ------------
+    enemy.play_card(
+        chosen_index,
+        target=player,
+        enemies_list=enemies,
+        create_enemy_func=create_enemy_by_name,
+        player=player
+    )
+
+    enemy.discard_hand()

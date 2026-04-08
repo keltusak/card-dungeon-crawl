@@ -64,6 +64,10 @@ class GameMap:
 
         self.grid = [["#" for _ in range(width)] for _ in range(height)]
 
+        self.enemies = []
+        self.locked_doors = []
+        self.boss_rooms = []
+
         # fog of war
         self.visible = [[False for _ in range(width)] for _ in range(height)]
         self.explored = [[False for _ in range(width)] for _ in range(height)]
@@ -276,35 +280,55 @@ class GameMap:
                 row += self.grid[y][x] + " "  # přidáme mezeru mezi políčka
             print(row)
 
-    def generate_objects(self, bonefire_count, chest_count, player_x, player_y, door_count=1):
+    def generate_objects(self, bonefire_count, chest_count, player_x, player_y, door_count=1, boss_room=None):
         existing_fires = []
         chest_positions = []
         door_positions = []
 
-        # 1) Položení všech dveří
+        boss_door = None
+        # -------------------------------
+        # 1) Normální dveře
+        # -------------------------------
         for _ in range(door_count):
             x, y = self.find_best_door_position(player_x, player_y)
+
+            # pokud je boss room, ignorujeme pozice uvnitř boss room
+            if boss_room:
+                if boss_room.x1 <= x <= boss_room.x2 and boss_room.y1 <= y <= boss_room.y2:
+                    continue
+
             self.place_door(x, y)
             door_positions.append((x, y))
 
-        # 2) Položení všech truhel
+        # -------------------------------
+        # 2) Truhly
+        # -------------------------------
         for x, y in self.generate_chest_positions(player_x, player_y, chest_count=chest_count):
             self.place_chest(x, y)
             chest_positions.append((x, y))
 
-        # 3) Položení všech ohnišť
+        # -------------------------------
+        # 3) Ohniště
+        # -------------------------------
+        for _ in range(bonefire_count):
+            for x, y in self.generate_bonefire_positions(
+                player_x, player_y,
+                existing_fires=existing_fires,
+                min_distance=3
+            ):
+                self.place_bonefire(x, y)
+                existing_fires.append((x, y))
 
-        # 4) Teprve nyní umístíme guardy
+        # -------------------------------
+        # 4) Stráže u dveří a truhel
+        # -------------------------------
         for x, y in door_positions:
-            pass
+            if boss_door and (x, y) == boss_door:
+                continue  # boss dveře nemají normální stráže
             self.place_door_guards(x, y)
 
         for x, y in chest_positions:
             self.place_chest_guard(x, y)
-
-        for _ in range(bonefire_count):
-            for x, y in self.generate_bonefire_positions(player_x, player_y, existing_fires=existing_fires, min_distance=3):
-                self.place_bonefire(x, y)
 
     def generate_enemies(self, count, player_x, player_y):
         for _ in range(count):
@@ -439,6 +463,64 @@ class GameMap:
             self.place_enemy(x, y)
             corridor_tiles.remove((x, y))
 
+    def get_boss_room_center(self):
+        if not self.boss_rooms:
+            raise ValueError("Boss room nebyla vytvořena")
+        boss_room = self.boss_rooms[0]
+        cx, cy = boss_room.center()
+        return cx, cy
+
+    def create_boss_room(self, rooms, start_x, start_y):
+        connected_rooms = [r for r in rooms if any(self.grid[y][x] == '.'
+                                                   for x in range(r.x1, r.x2+1)
+                                                   for y in range(r.y1, r.y2+1))]
+        if not connected_rooms:
+            connected_rooms = rooms
+
+        boss_room = max(connected_rooms, key=lambda r: abs(
+            r.center()[0]-start_x) + abs(r.center()[1]-start_y))
+
+        min_width, min_height = 5, 5
+        if boss_room.width < min_width:
+            boss_room.x2 = min(boss_room.x1 + min_width - 1, self.width - 1)
+        if boss_room.height < min_height:
+            boss_room.y2 = min(boss_room.y1 + min_height - 1, self.height - 1)
+
+        possible_tiles = [
+            (x, y)
+            for x in range(boss_room.x1, boss_room.x2 + 1)
+            for y in range(boss_room.y1, boss_room.y2 + 1)
+            if 0 <= x < self.width and 0 <= y < self.height and self.grid[y][x] == '.'
+        ]
+
+        if possible_tiles:
+            # dveře
+            boss_room.door = random.choice(possible_tiles)
+            dx, dy = boss_room.door
+            self.grid[dy][dx] = 'X'
+
+            # boss
+            boss_tiles = [
+                tile for tile in possible_tiles if tile != boss_room.door]
+            if boss_tiles:
+                bx, by = random.choice(boss_tiles)
+                self.grid[by][bx] = 'B'
+                boss_room.boss_pos = (bx, by)
+
+        self.boss_rooms.append(boss_room)
+        return boss_room
+
+    def place_boss_door(self, boss_room):
+        cx, cy = boss_room.center()
+        for dx, dy in [(0, -1), (-1, 0), (1, 0), (0, 1)]:
+            door_x, door_y = cx + dx, cy + dy
+            if 0 <= door_x < self.width and 0 <= door_y < self.height:
+                if self.grid[door_y][door_x] == ".":
+                    self.grid[door_y][door_x] = "X"
+                    return (door_x, door_y)
+        self.grid[cy][cx - 1] = "X"
+        return (cx - 1, cy)
+
     def update_visibility(game_map, px, py, radius=2):
         for y in range(game_map.height):
             for x in range(game_map.width):
@@ -474,6 +556,10 @@ class GameMap:
                         print("\033[38;5;94m▣\033[0m", end=" ")
                     elif char == "▮":
                         print("▮", end=" ")
+                    elif char == "B":
+                        print("\033[91mB\033[0m", end=" ")
+                    elif char == "X":
+                        print("\033[38;5;94mX\033[0m", end=" ")
                     else:
                         print(".", end=" ")
             print()
@@ -482,15 +568,42 @@ class GameMap:
         global game_map, player_x, player_y
 
         player.dungeon_level += 1
+        is_boss_level = player.dungeon_level % 2 == 0
 
         game_map = GameMap(24, 20)
         rooms = game_map.generate_dungeon()
 
         player_x, player_y = rooms[0].center()
 
-        game_map.generate_enemies_in_corridors(
-            2 + player.dungeon_level, player_x, player_y)
-        game_map.generate_objects(2, 2, player_x, player_y, door_count=1)
+        if is_boss_level:
+            boss_room = game_map.create_boss_room(rooms, player_x, player_y)
+            # spawn boss a jen boss dveře, žádné normální
+            game_map.generate_objects(
+                bonefire_count=1,
+                chest_count=1,
+                player_x=player_x,
+                player_y=player_y,
+                door_count=0,  # žádné běžné dveře
+                boss_room=boss_room
+            )
+            game_map.generate_enemies_in_corridors(
+                count=2 + player.dungeon_level,
+                player_x=player_x,
+                player_y=player_y
+            )
+        else:
+            game_map.generate_objects(
+                bonefire_count=2,
+                chest_count=2,
+                player_x=player_x,
+                player_y=player_y,
+                door_count=1
+            )
+            game_map.generate_enemies_in_corridors(
+                count=2 + player.dungeon_level,
+                player_x=player_x,
+                player_y=player_y
+            )
 
     @staticmethod
     def handle_tile(game_map, x, y, player, combat_function):
@@ -504,6 +617,25 @@ class GameMap:
             survived = combat_function(player, enemies)
 
             if survived:
+                game_map.grid[y][x] = "."
+                status = "enemy_dead"
+            else:
+                status = "player_dead"
+
+        elif tile == "B":
+            if not hasattr(game_map, "boss_spawned"):
+                boss = monsters.create_boss_group(player.dungeon_level)
+                cx, cy = x, y
+                game_map.boss_spawned = True
+            else:
+                boss = next(
+                    (e[2] for e in game_map.enemies if e[0] == x and e[1] == y), None)
+
+            survived = combat_function(player, boss)
+
+            if survived:
+                game_map.enemies = [
+                    e for e in game_map.enemies if e[2] != boss]
                 game_map.grid[y][x] = "."
                 status = "enemy_dead"
             else:
@@ -550,6 +682,18 @@ class GameMap:
         if tile == "▮":
             messages.append("Vstupuješ do dalšího patra!")
             GameMap.next_level(player)
+
+        elif tile == "X":
+            boss_alive = any("B" in row for row in game_map.grid)
+
+            if boss_alive:
+                messages.append(
+                    "Toto jsou zamčené dveře a zatím od nich nemáš klíč!")
+            else:
+                messages.append(
+                    "Otevíráš dveře a před tebou se otvírá nová krajina...")
+                game_map.grid[y][x] = "."  # dveře odemknuté
+                GameMap.next_level(player)
 
         return status, messages
 
@@ -973,6 +1117,14 @@ class RectRoom:
             self.y1 <= other.y2 and self.y2 >= other.y1
         )
 
+    @property
+    def width(self):
+        return self.x2 - self.x1 + 1
+
+    @property
+    def height(self):
+        return self.y2 - self.y1 + 1
+
 
 def choose_enemy(enemies):
     alive = []
@@ -1247,9 +1399,13 @@ def select_starting_build(player):
                 player.max_energy = 2
                 player.energy = player.max_energy
                 player.extra_draw = 0
-                player.equip_item(gear.sword)
-                player.equip_item(gear.shield)
-                player.equip_item(gear.padded_armor)
+                # player.equip_item(gear.sword)
+                # player.equip_item(gear.shield)
+                # player.equip_item(gear.padded_armor)
+                player.equip_item(gear.battle_axe)
+                player.equip_item(gear.war_paints)
+                player.equip_item(gear.ring_of_defense)
+                player.equip_item(gear.wurm_ring)
                 player.player_class = "vojak"
                 return
 
@@ -1304,15 +1460,16 @@ def select_starting_build(player):
 
             confirm = input("\nVybrat tuto postavu? (y/n): ")
             if confirm.lower() == "y":
-                player.max_hp = 14
-                player.hp = 14
+                player.max_hp = 9999
+                player.hp = 9999
                 player.max_energy = 2
                 player.energy = player.max_energy
                 player.extra_draw = 1
-                player.equip_item(gear.wooden_staff)
-                player.equip_item(gear.an_untitled_book)
-                player.equip_item(gear.old_robe)
+                # player.equip_item(gear.wooden_staff)
+                # player.equip_item(gear.an_untitled_book)
+                # player.equip_item(gear.old_robe)
                 player.player_class = "mag"
+                player.equip_item(gear.test_kill)
 
                 return
 
@@ -1332,12 +1489,14 @@ player.reduced_energy = 0
 player.combo_count = 0
 player.xp = 0
 player.lvl = 1
+level_up(player)
+level_up(player)
 
 game_map = GameMap(24, 20)
 rooms = game_map.generate_dungeon()
 player_x, player_y = rooms[0].center()
 game_map.generate_objects(2, random.randint(1, 3), player_x, player_y,)
-game_map.generate_enemies_in_corridors(2, player_x, player_y)
+# game_map.generate_enemies_in_corridors(2, player_x, player_y)
 
 
 while player.hp > 0:
@@ -1345,7 +1504,7 @@ while player.hp > 0:
 
     GameMap.update_visibility(game_map, player_x, player_y)
     GameMap.draw_map(game_map, player_x, player_y)
-    # game_map.print_full_map()  # pouze při testování generování map
+    game_map.print_full_map()  # pouze při testování generování map
 
     print(
         f"\nHP: {player.hp}/{player.max_hp}, XP: {player.xp}, LVL: {player.lvl}, Dungeon lvl: {player.dungeon_level}")

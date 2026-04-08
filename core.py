@@ -160,7 +160,12 @@ class Card:
                 f"{target.name} byl na nadcházející kolo připraven o {self.reduce_energy} energii/e")
 
         if self.buff_strenght:
-            user.add_temporary_strenght(self.buff_strenght)
+            if self.target_type == "all_enemies":
+                for e in enemies_list:
+                    if e != user and e.hp > 0:
+                        e.add_temporary_strenght(self.buff_strenght)
+            else:
+                user.add_temporary_strenght(self.buff_strenght)
 
         if self.lifesteal > 0 and dmg_done > 0:
             heal_amount = int(dmg_done * self.lifesteal)

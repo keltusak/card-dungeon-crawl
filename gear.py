@@ -3,6 +3,14 @@ from character import Character
 
 # ===== Zbraně pro vojáka =====
 
+test_kill = Equipment("zabiják", "hand", [
+    Card("smrt", damage=99),
+    Card("smrt", damage=99),
+    Card("smrt", damage=99),
+    Card("smrt", damage=99),
+])
+
+
 dagger = Equipment("Dýka", "hand", [
     Card("Bodnutí", damage=3),
     Card("Podlé bodnutí", damage=4, cost=0)
@@ -333,4 +341,25 @@ friendly_ant = Equipment("Mravenec", "companion", [
 crow = Equipment("Vrána", "companion", [
     Card("Klovnutí", damage=2, effect=Dodge(0.4, 1), cost=1),
     Card("Průzkum", draw=1, discard=1, cost=0)
+])
+
+# ===== Bossové =====
+
+goblin_crown = Equipment("Goblinní koruna", "belt", [
+    Card("Goblinní stráž", spawn_enemy="Goblinní válečník",
+         spawn_count=1, target_type="self"),
+    Card("Všichi sem", spawn_enemy="Goblin",
+         spawn_count=2, target_type="self"),
+    Card("Pokřikování rozkazů", buff_strenght=1, target_type="all_enemies")
+])
+
+shiny_throne = Equipment("Lesklej trůn", "body", [
+    Card("Schování se za trůn", block=6, target_type="self"),
+    Card("Schování se za trůn", block=6, target_type="self"),
+])
+
+chiefs_cutter = Equipment("Šéfův kráječ", "hand", [
+    Card("Rozseknutí", damage=5),
+    Card("Rozseknutí", damage=5),
+    Card("Naporcovat", damage=8),
 ])
