@@ -42,7 +42,7 @@ class Ability:
 class Card:
     def __init__(self, name, damage=0, self_damage=0, block=0, energy=0, reduce_energy=0, effect=None, effect_chance=1.0,
                  effect_on_damage=False, lifesteal=0, devour=0, target_type="enemy", spawn_enemy=None,
-                 spawn_count=0, draw=0, discard=0, buff_strenght=0, combo=0, scale=1, base=0, cost=1):
+                 spawn_count=0, draw=0, discard=0, buff_strenght=0, increase_fatigue=0, combo=0, scale=1, base=0, cost=1):
 
         self.name = name
         self.damage = damage
@@ -61,6 +61,7 @@ class Card:
         self.spawn_enemy = spawn_enemy
         self.spawn_count = spawn_count
         self.buff_strenght = buff_strenght
+        self.increase_fatigue = increase_fatigue
 
         self.combo = combo
         self.scale = scale
@@ -84,10 +85,16 @@ class Card:
         elif target_type == "any":
             return [player] + [e for e in enemies if e.hp > 0]
 
-    def get_damage(self, user):
+    def get_damage(self, user, target):
         # klasický damage
         if isinstance(self.damage, int):
             return self.damage
+
+        if self.damage == "fatigue":
+            base = getattr(self, "base", 0)
+            scale = getattr(self, "scale", 1)
+            fatigue = getattr(target, "fatigue", 0)
+            return base + fatigue * scale
 
         if self.damage == "combo":
             base = getattr(self, "base", 0)
@@ -105,6 +112,18 @@ class Card:
 
         return 0
 
+    def get_block(self, user, target):
+        if self.block == "fatigue":
+            base = getattr(self, "base", 0)
+            scale = getattr(self, "scale", 1)
+            fatigue = getattr(target, "fatigue", 0)
+            return base + fatigue * scale
+
+        if isinstance(self.block, int):
+            return self.block
+
+        return 0
+
     def play(self, user, target, enemies_list=None, create_enemy_func=None, player=None, aoe=False):
         print(f"{user.name} používá {self.name}")
 
@@ -115,7 +134,7 @@ class Card:
             player.bestiary[user.name]["seen_cards"].add(self.name)
 
         dmg_done = 0
-        base_damage = self.get_damage(user)
+        base_damage = self.get_damage(user, target)
 
         if base_damage > 0:
             user.attack_cards_played += 1
@@ -143,10 +162,11 @@ class Card:
                 f"{user.name} vyvolal nepřítele: {self.spawn_count} x {new_enemy.name}!")
 
         if self.block:
+            block_value = self.get_block(user, target)
             if self.target_type == "ally":
-                target.add_block(self.block)
+                target.add_block(block_value)
             else:
-                user.add_block(self.block)
+                user.add_block(block_value)
 
         if self.combo:
             user.combo_count += self.combo
@@ -158,6 +178,10 @@ class Card:
             target.reduced_energy += self.reduce_energy
             print(
                 f"{target.name} byl na nadcházející kolo připraven o {self.reduce_energy} energii/e")
+
+        if self.increase_fatigue:
+            target.fatigue += self.increase_fatigue
+            print(f"{target.name} cítí únavu (aktuální únava: {target.fatigue})")
 
         if self.buff_strenght:
             if self.target_type == "all_enemies":

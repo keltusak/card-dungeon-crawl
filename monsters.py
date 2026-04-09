@@ -148,6 +148,8 @@ def create_enemy_by_name(name):
     enemy.lore = template.get("lore", "")
     enemy.extra_lore = template.get("extra_lore", "")
 
+    enemy.is_boss = False
+
     return enemy
 
 
@@ -270,19 +272,21 @@ def choose_spider_card(enemy, player):
 def create_boss_by_name(name):
     boss_types = {
         "Král Goblinů": {
-            "hp": 45,
+            "hp": 20,  # 40
             "equipment": [gear.goblin_crown, gear.chiefs_cutter, gear.shiny_throne],
             "abilities": [abilities.maintaining_defense],
             "description": "Vládce goblinů, známý svou silou, smyslem pro strategii a podlostí.",
-            "lore": "Král Goblinů sjednotil všechny gobliní kmeny pod svou vládou."
+            "lore": "Král Goblinů sjednotil všechny gobliní kmeny pod svou vládou.",
+            "ai": goblin_king_ai
         },
         "Temný Šaman": {
             "hp": 35,
-            "equipment": [gear.wooden_staff, gear.bloodthirsty_tongue],
+            "equipment": [gear.spirits_of_lost, gear.dark_mist, gear.twisted_staff],
             "abilities": [],
             "actions": 2,
             "description": "Mocný mág ovládající temnou magii.",
-            "lore": "Tento mocný šaman žije v hlubinách lesa a shromažďuje duše těch, kteří se v něm stratí. Svými temnými silami přetváří les k obrazu svému."
+            "lore": "Tento mocný šaman žije v hlubinách lesa a shromažďuje duše těch, kteří se v něm stratí. Svými temnými silami přetváří les k obrazu svému.",
+            "ai": dark_shaman_ai
         },
         # přidej další bossy podle potřeby
     }
@@ -307,13 +311,15 @@ def create_boss_by_name(name):
     boss.lore = template.get("lore", "")
     boss.extra_lore = template.get("extra_lore", "")
 
+    boss.is_boss = True
+
     return boss
 
 
 def create_boss_group(dungeon_level=1):
     boss_encounters = [
-        {"name": "Král Goblinů", "levels": [2, 5]},
-        # {"name": "Temný Šaman", "levels": [2, 5]},
+        {"name": "Král Goblinů", "levels": [1, 2, 5]},
+        # {"name": "Temný Šaman", "levels": [1, 2, 5]},
         # přidej další bossy a levely
     ]
 
@@ -350,21 +356,27 @@ def goblin_king_ai(enemy, player, enemies):
             chosen_index = i
             break
 
-    if chosen_index is None and enemy_hp > enemy_max_hp // 2:
+    if chosen_index is None and enemy_hp <= enemy_max_hp // 4:
         for i, card in enumerate(enemy.hand):
-            if card.spawn_enemy:
+            if card.block:
                 chosen_index = i
                 break
 
-    if chosen_index is None and enemy_hp <= enemy_max_hp // 2:
+    if chosen_index is None:
         for i, card in enumerate(enemy.hand):
-            if card.block:
+            if card.spawn_enemy:
                 chosen_index = i
                 break
 
     for i, card in enumerate(enemy.hand):
         if card.name == "Pokřiování rozkazů" and len([e for e in enemies if e.hp > 0]) > 1:
             return i
+
+    if chosen_index is None and enemy_hp <= enemy_max_hp // 2:
+        for i, card in enumerate(enemy.hand):
+            if card.block:
+                chosen_index = i
+                break
 
     if chosen_index is None and enemy.block > 0:
         for i, card in enumerate(enemy.hand):
@@ -391,3 +403,74 @@ def goblin_king_ai(enemy, player, enemies):
     )
 
     enemy.discard_hand()
+
+
+def dark_shaman_ai(enemy, player, enemies):
+    actions = enemy.actions
+
+    enemy.draw(actions+1)
+
+    for _ in range(actions):
+        if not enemy.hand:
+            break
+
+        index = choose_dark_shaman_card(enemy, player, enemies)
+
+        enemy.play_card(
+            index,
+            target=player,
+            enemies_list=enemies,
+            create_enemy_func=create_enemy_by_name,
+            player=player
+        )
+
+    enemy.discard_hand()
+
+
+def choose_dark_shaman_card(enemy, player, enemies):
+    player_fatigue = getattr(player, "fatigue", 0)
+    enemy_hp = enemy.hp
+    enemy_max_hp = enemy.max_hp
+
+    has_dodge = any(isinstance(effect, core.Dodge)
+                    for effect in enemy.status_effects)
+
+    hand = enemy.hand
+
+    if player_fatigue >= 5:
+        for i, card in enumerate(hand):
+            if card.block:
+                return i
+
+    if player_fatigue >= 6:
+        for i, card in enumerate(hand):
+            if card.damage == "fatigue":
+                return i
+
+    for i, card in enumerate(hand):
+        if card.name == "Přivolání mlhy":
+            return i
+
+    if enemy_hp <= enemy_max_hp // 2:
+        for i, card in enumerate(hand):
+            if getattr(card, "lifesteal", 0) > 0:
+                return i
+
+    for i, card in enumerate(hand):
+        if card.effect and isinstance(card.effect, core.Stun):
+            return i
+
+    if has_dodge:
+        for i, card in enumerate(hand):
+            if card.name == "Přízraky mlhy":
+                return i
+
+    for i, card in enumerate(hand):
+        if getattr(card, "increase_fatigue", 0) > 0:
+            return i
+
+    valid_indices = [
+        i for i, card in enumerate(hand)
+        if not (card.name == "Přízraky mlhy" and not has_dodge)
+    ]
+    return random.choice(valid_indices)

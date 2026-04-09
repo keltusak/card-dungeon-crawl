@@ -1018,6 +1018,7 @@ def level_up(self):
     self.lvl += 1
 
     all_abilities = [
+        abilities.pain_for_all,
         abilities.power_strike,
         abilities.fast_strike,
         abilities.defensive_strike,
@@ -1244,12 +1245,15 @@ def combat(player, enemies):
                 return False
 
             elif result == "enemy_dead":
-                print("Vyhrál jsi!")
-                input("ENTER pro pokračování...")
                 for enemy in enemies:
-                    if enemy.name in player.bestiary:
+                    if enemy.hp <= 0 and enemy.name in player.bestiary:
                         player.bestiary[enemy.name]["kills"] += 1
-                return True
+                        if getattr(enemy, "is_boss", False):
+                            print(f"Zabil jsi {enemy.name}! Vítězíš!")
+                            input("ENTER pro pokračování...")
+                            return True
+                # pokud nebyl zabit boss, jen vyřadíme mrtvé nepřátele
+                enemies[:] = [e for e in enemies if e.hp > 0]
             elif result == "player_dead":
                 print("Prohrál jsi!")
                 input("ENTER pro pokračování...")
@@ -1348,13 +1352,18 @@ def combat(player, enemies):
                 input("ENTER pro pokračování...")
                 return False
 
-        if all(enemy.hp <= 0 for enemy in enemies):
-            print("Vyhrál jsi!")
+        bosses = [e for e in enemies if getattr(e, "is_boss", False)]
+        if any(boss.hp <= 0 for boss in bosses):
+            print(
+                f"Zabil jsi {', '.join(boss.name for boss in bosses)}! Vítězíš!")
             input("ENTER pro pokračování...")
             for enemy in enemies:
-                if enemy.name in player.bestiary:
+                if enemy.name in player.bestiary and enemy.hp <= 0:
                     player.bestiary[enemy.name]["kills"] += 1
             return True
+
+        # jinak odstraníme mrtvé miniony
+        enemies[:] = [e for e in enemies if e.hp > 0]
 
         for ability in player.abilities:
             if ability.trigger == "after_opponent_turn" and ability.active:
@@ -1478,6 +1487,8 @@ def select_starting_build(player):
 
 
 # ===== MAIN LOOP ========
+DEBUG_BOSS_FIGHT = True
+
 clear_screen()
 player = character.Character("Hráč", 20)
 select_starting_build(player)
@@ -1498,6 +1509,18 @@ player_x, player_y = rooms[0].center()
 game_map.generate_objects(2, random.randint(1, 3), player_x, player_y,)
 # game_map.generate_enemies_in_corridors(2, player_x, player_y)
 
+# ===== DEBUG BOSS FIGHT =====
+if DEBUG_BOSS_FIGHT:
+    boss = monsters.create_boss_group(player.dungeon_level)
+
+    survived = combat(player, boss)
+
+    if not survived:
+        print("Konec hry (debug boss)")
+        exit()
+
+    print("Boss poražen (debug), pokračuje hra...")
+    input("ENTER...")
 
 while player.hp > 0:
     clear_screen()

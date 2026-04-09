@@ -344,7 +344,7 @@ crow = Equipment("Vrána", "companion", [
 ])
 
 # ===== Bossové =====
-
+# ------- Král Goblinů -------
 goblin_crown = Equipment("Goblinní koruna", "belt", [
     Card("Goblinní stráž", spawn_enemy="Goblinní válečník",
          spawn_count=1, target_type="self"),
@@ -362,4 +362,22 @@ chiefs_cutter = Equipment("Šéfův kráječ", "hand", [
     Card("Rozseknutí", damage=5),
     Card("Rozseknutí", damage=5),
     Card("Naporcovat", damage=8),
+])
+
+# ------- Temný šaman -------
+spirits_of_lost = Equipment("Duše zatracených", "belt", [
+    Card("Vyčerpání", increase_fatigue=2),
+    Card("Vyčerpání", increase_fatigue=2),
+    Card("Dotek strnutí", reduce_energy=1, increase_fatigue=1),
+])
+
+dark_mist = Equipment("Temná mlha", "belt", [
+    Card("Přivolání mlhy", effect=Dodge(0.5, 3), target_type="self"),
+    Card("Přízraky mlhy", damage=6, increase_fatigue=1)
+])
+
+twisted_staff = Equipment("Pokroucená hůl", "hand", [
+    Card("Sklizení duše", damage="fatigue"),
+    Card("Roj komárů", damage=4, lifesteal=1),
+    Card("Vyčkávání", block="fatigue")
 ])
