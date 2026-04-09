@@ -315,21 +315,19 @@ class Character:
             player.energy -= card.cost
 
             # ===== KONTROLY =====
-            bosses = [e for e in enemies if getattr(e, "is_boss", False)]
-            if any(boss.hp <= 0 for boss in bosses):
-                print(
-                    f"Zabil jsi {', '.join(boss.name for boss in bosses)}! Vítězíš!")
-                input("ENTER pro pokračování...")
-                for e in enemies:
-                    if e.hp <= 0 and e.name in player.bestiary:
-                        player.bestiary[e.name]["kills"] += 1
-                return "enemy_dead"
-
-            if all(e.hp <= 0 for e in enemies):
-                return "enemy_dead"
+            boss = next((e for e in enemies if e.is_boss), None)
 
             if player.hp <= 0:
-                return "player_dead"
+                return False
+
+            if boss:
+                # boss existuje, souboj končí ihned jeho smrtí
+                if boss.hp <= 0:
+                    return True
+            else:
+                # žádný boss – klasický konec souboje, všichni nepřátelé mrtví
+                if all(e.hp <= 0 for e in enemies):
+                    return True
 
             print(f"\nZbývá energie: {player.energy}")
 

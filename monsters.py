@@ -94,38 +94,63 @@ def create_enemy_by_name(name):
         "Mravenec": {
             "hp": 1,
             "equipment": [gear.mandibles],
+            "description": "",
+            "lore": "",
+            "extra_lore": ""
+
         },
         "Živoucí strom": {
             "hp": 20,
             "equipment": [gear.branches, gear.bark],
-            "actions": 2
+            "actions": 2,
+            "description": "",
+            "lore": "",
+            "extra_lore": ""
         },
         "Žrout": {
             "hp": 8,
             "equipment": [gear.devourers_maw],
+            "description": "",
+            "lore": "",
+            "extra_lore": "",
         },
         "Goblinní zvěd": {
             "hp": 12,
             "equipment": [gear.broken_sword, gear.horn, gear.reflexis],
+            "description": "",
+            "lore": "",
+            "extra_lore": "",
         },
         "Goblinní válečník": {
             "hp": 16,
             "equipment": [gear.sword, gear.shield_e, gear.war_paints],
             "abilities": [abilities.maintaining_defense],
+            "description": "",
+            "lore": "",
+            "extra_lore": "",
         },
         "Pavoučí mládě": {
             "hp": 7,
             "equipment": [gear.small_fangs, gear.newborns_exoskelet],
+            "description": "",
+            "lore": "",
+            "extra_lore": "",
         },
         "Pavouk s vejcem": {
             "hp": 16,
             "equipment": [gear.fangs, gear.exoskelet, gear.spiders_cocon],
-            "ai": spider_ai
+            "ai": spider_ai,
+            "description": "",
+            "lore": "",
+            "extra_lore": "",
         },
         "Černý medvěd": {
             "hp": 20,
             "equipment": [gear.jaw],
-            "actions": 2
+            "actions": 2,
+            "description": "",
+            "lore": "",
+            "extra_lore": "",
         },
 
     }
@@ -272,11 +297,14 @@ def choose_spider_card(enemy, player):
 def create_boss_by_name(name):
     boss_types = {
         "Král Goblinů": {
-            "hp": 20,  # 40
+            "hp": 40,
             "equipment": [gear.goblin_crown, gear.chiefs_cutter, gear.shiny_throne],
             "abilities": [abilities.maintaining_defense],
             "description": "Vládce goblinů, známý svou silou, smyslem pro strategii a podlostí.",
             "lore": "Král Goblinů sjednotil všechny gobliní kmeny pod svou vládou.",
+            "entry_text": "Vstupuješ do rozvalin starého hradu, jehož kamenné věže jsou porostlé mechem a liánami. "
+            "\nVzduch je těžký od vlhkosti lesa, mezi troskami se mihotají stíny. Kdesi v dálce zaznívá chřest zbraní a hlasité vrčení - "
+            "\na pak zahlédneš trůn, na němž sedí Král Goblinů, korunovaný a připravený bránit svou říši.",
             "ai": goblin_king_ai
         },
         "Temný Šaman": {
@@ -285,7 +313,10 @@ def create_boss_by_name(name):
             "abilities": [],
             "actions": 2,
             "description": "Mocný mág ovládající temnou magii.",
-            "lore": "Tento mocný šaman žije v hlubinách lesa a shromažďuje duše těch, kteří se v něm stratí. Svými temnými silami přetváří les k obrazu svému.",
+            "lore": "Vcházíš do temné mýtiny zahalené mlhou. Staré stromy se naklánějí nad tvou cestou, jejich větve škrábou do tváře jako prsty stínů. "
+            "\nVzduch je plný chladivé magie a ozvěny dávných rituálů. Uprostřed prostoru se z mlhy vynořuje Temný Šaman, "
+            "\njeho oči září a ruce svírají mocný artefakt - je jasné, že les je jeho a on je připraven tě zastavit.",
+            "entry_text": "",
             "ai": dark_shaman_ai
         },
         # přidej další bossy podle potřeby
@@ -311,6 +342,8 @@ def create_boss_by_name(name):
     boss.lore = template.get("lore", "")
     boss.extra_lore = template.get("extra_lore", "")
 
+    boss.entry_text = template.get(
+        "entry_text", f"Narazil jsi na bosse: {boss.name}!")
     boss.is_boss = True
 
     return boss
@@ -318,9 +351,9 @@ def create_boss_by_name(name):
 
 def create_boss_group(dungeon_level=1):
     boss_encounters = [
-        {"name": "Král Goblinů", "levels": [1, 2, 5]},
-        # {"name": "Temný Šaman", "levels": [1, 2, 5]},
-        # přidej další bossy a levely
+        {"name": "Král Goblinů", "levels": [1, 5]},
+        {"name": "Temný Šaman", "levels": [1, 5]},
+        # později další bossové pro toto i nadcházející regiony
     ]
 
     possible_bosses = [
@@ -331,8 +364,8 @@ def create_boss_group(dungeon_level=1):
 
     chosen_boss = random.choice(possible_bosses)
     boss = create_boss_by_name(chosen_boss["name"])
-
-    print(f"Narazil jsi na bosse: {boss.name}!")
+    core.clear_screen()
+    print(f"{core.Colors.DARK_RED}{boss.entry_text}{core.Colors.RESET}")
     input("ENTER pro pokračování...")
 
     return [boss]

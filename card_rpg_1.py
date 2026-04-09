@@ -568,7 +568,7 @@ class GameMap:
         global game_map, player_x, player_y
 
         player.dungeon_level += 1
-        is_boss_level = player.dungeon_level % 2 == 0
+        is_boss_level = player.dungeon_level % 5 == 0
 
         game_map = GameMap(24, 20)
         rooms = game_map.generate_dungeon()
@@ -825,16 +825,18 @@ def show_enemy_detail(player, enemy_name):
     if kills >= 3:
         print_section("Lore", info.get('lore', '???'))
     else:
-        print("\nLORE".center(60))
+        text = "??? (zabij více nepřátel)"
+        print("\n" + "LORE".center(60))
         print("-" * 60)
-        print("??? (zabij více nepřátel)")
+        print(text.center(60))
 
     if kills >= 6:
         print_section("Extra lore", info.get('extra_lore', '???'))
     else:
-        print("\nEXTRA LORE".center(60))
+        text = "??? (zabij více nepřátel)"
+        print("\n" + "EXTRA LORE".center(60))
         print("-" * 60)
-        print("??? (zabij více nepřátel)")
+        print(text.center(60))
 
     input("\nENTER pro návrat...")
 
@@ -1153,6 +1155,8 @@ def choose_enemy(enemies):
 
 
 def combat(player, enemies):
+
+    # ===== precomabat prepare ======
     player.reset_combat()
     for enemy in enemies:
         enemy.reset_combat()
@@ -1161,26 +1165,29 @@ def combat(player, enemies):
     for enemy in enemies:
         enemy.build_deck()
 
-    for enemy in enemies:
-        if enemy.name not in player.bestiary:
-            player.bestiary[enemy.name] = {
-                "seen": True,
-                "kills": 0,
-                "seen_cards": set(),
-                "all_cards": enemy.all_cards,
-                "info": {
-                    "description": enemy.description,
-                    "lore": enemy.lore,
-                    "extra_lore": enemy.extra_lore
-                }
-            }
-
     first_turn = True
 
     global combat_xp
     combat_xp = 1+player.dungeon_level
 
+    # ===== main combat loop ======
+
     while player.hp > 0 and any(e.hp > 0 for e in enemies):
+
+        for enemy in enemies:
+            if enemy.name not in player.bestiary:
+                player.bestiary[enemy.name] = {
+                    "seen": True,
+                    "kills": 0,
+                    "seen_cards": set(),
+                    "all_cards": enemy.all_cards,
+                    "info": {
+                        "description": enemy.description,
+                        "lore": enemy.lore,
+                        "extra_lore": enemy.extra_lore
+                    }
+                }
+
         clear_screen()
         print("\n--- Nové kolo ---")
 
@@ -1237,27 +1244,34 @@ def combat(player, enemies):
                     input("ENTER pro pokračování...")
                     return False
 
-            result = character.Character.player_turn(player, enemies)
+            character.Character.player_turn(player, enemies)
+
+            boss = next((e for e in enemies if e.is_boss), None)
 
             if player.hp <= 0:
                 print("Prohrál jsi!")
                 input("ENTER pro pokračování...")
                 return False
 
-            elif result == "enemy_dead":
-                for enemy in enemies:
-                    if enemy.hp <= 0 and enemy.name in player.bestiary:
-                        player.bestiary[enemy.name]["kills"] += 1
-                        if getattr(enemy, "is_boss", False):
-                            print(f"Zabil jsi {enemy.name}! Vítězíš!")
-                            input("ENTER pro pokračování...")
-                            return True
-                # pokud nebyl zabit boss, jen vyřadíme mrtvé nepřátele
-                enemies[:] = [e for e in enemies if e.hp > 0]
-            elif result == "player_dead":
-                print("Prohrál jsi!")
-                input("ENTER pro pokračování...")
-                return False
+            if boss:
+                # boss existuje, souboj končí ihned jeho smrtí
+                if boss.hp <= 0:
+                    print("Porazil jsi bosse!")
+                    input("ENTER pro pokračování...")
+                    for enemy in enemies:
+                        if enemy.name in player.bestiary and enemy.hp <= 0:
+                            player.bestiary[enemy.name]["kills"] += 1
+                    return True
+            else:
+                # žádný boss – klasický konec souboje, všichni nepřátelé mrtví
+                if all(e.hp <= 0 for e in enemies):
+                    print("Vyhrál jsi!")
+                    input("ENTER pro pokračování...")
+                    for enemy in enemies:
+                        if enemy.name in player.bestiary and enemy.hp <= 0:
+                            player.bestiary[enemy.name]["kills"] += 1
+                    return True
+
         clear_screen()
         print(f"\n{core.Colors.RED}--- Nepřátelský tah ---{core.Colors.RESET}")
         print(
@@ -1347,27 +1361,35 @@ def combat(player, enemies):
                         player=player
                     )
 
+            boss = next((e for e in enemies if e.is_boss), None)
+
             if player.hp <= 0:
                 print("Prohrál jsi!")
                 input("ENTER pro pokračování...")
                 return False
 
-        bosses = [e for e in enemies if getattr(e, "is_boss", False)]
-        if any(boss.hp <= 0 for boss in bosses):
-            print(
-                f"Zabil jsi {', '.join(boss.name for boss in bosses)}! Vítězíš!")
-            input("ENTER pro pokračování...")
-            for enemy in enemies:
-                if enemy.name in player.bestiary and enemy.hp <= 0:
-                    player.bestiary[enemy.name]["kills"] += 1
-            return True
+            if boss:
+                # boss existuje, souboj končí ihned jeho smrtí
+                if boss.hp <= 0:
+                    print("Porazil jsi bosse!")
+                    input("ENTER pro pokračování...")
+                    for enemy in enemies:
+                        if enemy.name in player.bestiary and enemy.hp <= 0:
+                            player.bestiary[enemy.name]["kills"] += 1
+                    return True
+            else:
+                # žádný boss – klasický konec souboje, všichni nepřátelé mrtví
+                if all(e.hp <= 0 for e in enemies):
+                    print("Vyhrál jsi!")
+                    input("ENTER pro pokračování...")
+                    for enemy in enemies:
+                        if enemy.name in player.bestiary and enemy.hp <= 0:
+                            player.bestiary[enemy.name]["kills"] += 1
+                    return True
 
-        # jinak odstraníme mrtvé miniony
-        enemies[:] = [e for e in enemies if e.hp > 0]
-
-        for ability in player.abilities:
-            if ability.trigger == "after_opponent_turn" and ability.active:
-                ability.effect(player)
+            for ability in player.abilities:
+                if ability.trigger == "after_opponent_turn" and ability.active:
+                    ability.effect(player)
 
         input("Stiskni cokoliv pro vstup do dalšího kola:")
 
@@ -1378,7 +1400,7 @@ def select_starting_build(player):
         print("\n\033[94m=== VYBER POSTAVU ZA KTEROU CHCEŠ HRÁT: ===\033[0m")
         print("1) Voják")
         print("2) Kultista")
-        print("3) Mág")
+        print("3) Mág (Připravuje se)")
 
         choice = input("> ")
 
@@ -1408,13 +1430,13 @@ def select_starting_build(player):
                 player.max_energy = 2
                 player.energy = player.max_energy
                 player.extra_draw = 0
-                # player.equip_item(gear.sword)
-                # player.equip_item(gear.shield)
-                # player.equip_item(gear.padded_armor)
-                player.equip_item(gear.battle_axe)
-                player.equip_item(gear.war_paints)
-                player.equip_item(gear.ring_of_defense)
-                player.equip_item(gear.wurm_ring)
+                player.equip_item(gear.sword)
+                player.equip_item(gear.shield)
+                player.equip_item(gear.padded_armor)
+                # player.equip_item(gear.battle_axe)
+                # player.equip_item(gear.war_paints)
+                # player.equip_item(gear.ring_of_defense)
+                # player.equip_item(gear.wurm_ring)
                 player.player_class = "vojak"
                 return
 
@@ -1469,16 +1491,16 @@ def select_starting_build(player):
 
             confirm = input("\nVybrat tuto postavu? (y/n): ")
             if confirm.lower() == "y":
-                player.max_hp = 9999
-                player.hp = 9999
+                player.max_hp = 14
+                player.hp = 14
                 player.max_energy = 2
                 player.energy = player.max_energy
                 player.extra_draw = 1
-                # player.equip_item(gear.wooden_staff)
-                # player.equip_item(gear.an_untitled_book)
-                # player.equip_item(gear.old_robe)
+                player.equip_item(gear.wooden_staff)
+                player.equip_item(gear.an_untitled_book)
+                player.equip_item(gear.old_robe)
                 player.player_class = "mag"
-                player.equip_item(gear.test_kill)
+                # player.equip_item(gear.test_kill)
 
                 return
 
@@ -1500,17 +1522,15 @@ player.reduced_energy = 0
 player.combo_count = 0
 player.xp = 0
 player.lvl = 1
-level_up(player)
-level_up(player)
 
 game_map = GameMap(24, 20)
 rooms = game_map.generate_dungeon()
 player_x, player_y = rooms[0].center()
 game_map.generate_objects(2, random.randint(1, 3), player_x, player_y,)
-# game_map.generate_enemies_in_corridors(2, player_x, player_y)
+game_map.generate_enemies_in_corridors(2, player_x, player_y)
 
 # ===== DEBUG BOSS FIGHT =====
-if DEBUG_BOSS_FIGHT:
+"""if DEBUG_BOSS_FIGHT:
     boss = monsters.create_boss_group(player.dungeon_level)
 
     survived = combat(player, boss)
@@ -1520,14 +1540,14 @@ if DEBUG_BOSS_FIGHT:
         exit()
 
     print("Boss poražen (debug), pokračuje hra...")
-    input("ENTER...")
+    input("ENTER...")"""
 
 while player.hp > 0:
     clear_screen()
 
     GameMap.update_visibility(game_map, player_x, player_y)
     GameMap.draw_map(game_map, player_x, player_y)
-    game_map.print_full_map()  # pouze při testování generování map
+    # game_map.print_full_map()  # pouze při testování generování map
 
     print(
         f"\nHP: {player.hp}/{player.max_hp}, XP: {player.xp}, LVL: {player.lvl}, Dungeon lvl: {player.dungeon_level}")

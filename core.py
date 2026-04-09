@@ -17,6 +17,7 @@ class Colors:
     YELLOW = "\033[93m"
     BLUE = "\033[94m"
     GRAY = "\033[90m"
+    DARK_RED = "\033[31m"
     RESET = "\033[0m"
 
 
