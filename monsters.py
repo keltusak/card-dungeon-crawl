@@ -229,7 +229,7 @@ def create_enemy_group(dungeon_level=1):
         for _ in range(count):
             enemies.append(create_enemy_by_name(name))
 
-    print(
+    core.print_center_block(
         f"Narazil jsi na nepřítele: {encounter['type']} ({len(enemies)})")
     input("ENTER pro pokračování...")
     return enemies
@@ -365,7 +365,8 @@ def create_boss_group(dungeon_level=1):
     chosen_boss = random.choice(possible_bosses)
     boss = create_boss_by_name(chosen_boss["name"])
     core.clear_screen()
-    print(f"{core.Colors.DARK_RED}{boss.entry_text}{core.Colors.RESET}")
+    core.print_box(
+        "", "", f"{core.Colors.DARK_RED}{boss.entry_text}{core.Colors.RESET}")
     input("ENTER pro pokračování...")
 
     return [boss]

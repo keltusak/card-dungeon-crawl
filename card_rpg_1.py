@@ -14,6 +14,14 @@ import character
 import monsters
 
 
+def render_block(title, lines):
+    render([f"--- {title} ---", ""] + lines + [""])
+
+
+def render(lines):
+    core.print_center_block("\n".join(lines))
+
+
 def clear_screen():
     # Windows
     if os.name == "nt":
@@ -27,34 +35,13 @@ def get_terminal_width():
     return shutil.get_terminal_size().columns
 
 
-def center_text(text, width):
-    return text.center(width)
-
-
-def print_box(title, stats, description, width=60):
-    print("=" * width)
-    print(title.center(width))
-    print("=" * width)
-
-    for stat in stats:
-        print(stat.ljust(width))
-
-    print("-" * width)
-
-    wrapped_text = textwrap.wrap(description, width)
-    for line in wrapped_text:
-        print(line)
-
-    print("=" * width)
-
-
 def print_section(title, text, width=60):
-    print("\n" + title.upper().center(width))
-    print("-" * width)
+    core.print_center_block("\n" + title.upper().center(width))
+    core.print_center_block("-" * width)
 
     wrapped = textwrap.wrap(text, width)
     for line in wrapped:
-        print(line)
+        core.print_center_block(line)
 
 
 class GameMap:
@@ -278,7 +265,7 @@ class GameMap:
             row = ""
             for x in range(self.width):
                 row += self.grid[y][x] + " "  # přidáme mezeru mezi políčka
-            print(row)
+            core.print_center_block(row)
 
     def generate_objects(self, bonefire_count, chest_count, player_x, player_y, door_count=1, boss_room=None):
         existing_fires = []
@@ -532,37 +519,42 @@ class GameMap:
                     game_map.visible[y][x] = False
 
     def draw_map(game_map, px, py):
+        lines = []
+
         for y in range(game_map.height):
+            row = ""
+
             for x in range(game_map.width):
                 char = game_map.grid[y][x]
 
                 if x == px and y == py:
-                    print("\033[93mP\033[0m", end=" ")
+                    row += "\033[93mP\033[0m "
                 elif not game_map.explored[y][x]:
-                    # neprozkoumané
-                    print("?", end=" ")
+                    row += "? "
                 elif not game_map.visible[y][x]:
-                    # prozkoumané, ale mimo dohled - šedě
-                    print(f"\033[90m{char}\033[0m", end=" ")
+                    row += f"\033[90m{char}\033[0m "
                 else:
-                    # právě viditelné
                     if char == "#":
-                        print("\033[92m#\033[0m", end=" ")
+                        row += "\033[92m#\033[0m "
                     elif char == "E":
-                        print("\033[91mE\033[0m", end=" ")
+                        row += "\033[91mE\033[0m "
                     elif char == "^":
-                        print("\033[38;5;208m^\033[0m", end=" ")
+                        row += "\033[38;5;208m^\033[0m "
                     elif char == "▣":
-                        print("\033[38;5;94m▣\033[0m", end=" ")
+                        row += "\033[38;5;94m▣\033[0m "
                     elif char == "▮":
-                        print("▮", end=" ")
+                        row += "▮ "
                     elif char == "B":
-                        print("\033[91mB\033[0m", end=" ")
+                        row += "\033[91mB\033[0m "
                     elif char == "X":
-                        print("\033[38;5;94mX\033[0m", end=" ")
+                        row += "\033[38;5;94mX\033[0m "
                     else:
-                        print(".", end=" ")
-            print()
+                        row += ". "
+
+            lines.append(row.rstrip())
+
+        map_text = "\n".join(lines)
+        core.print_center_block(map_text)
 
     def next_level(player):
         global game_map, player_x, player_y
@@ -700,90 +692,131 @@ class GameMap:
 
 def show_help():
     clear_screen()
-    print("\033[96m=== PŘÍRUČKA HRY ===\033[0m\n")  # světle modrý nadpis
 
-    print("\033[93mOvládání:\033[0m")  # žluté nadpisy
-    print("WASD - pohyb po mapě")
-    print("Q - ukončit hru")
-    print("I - otevřít inventář")
-    print("H - zobrazit tuto příručku")
-    print("V boji vyber číslo karty nebo ENTER pro konec tahu\n")
+    lines = []
 
-    print("\033[93mMapa a ikony:\033[0m")
-    print("- # - stěna")
-    print("- . - průchozí dlaždice / chodba")
-    print("- P - tvoje pozice")
-    print("- E - nepřítel")
-    print("- ^ - ohniště, doplní část zdraví")
-    print("- ▣ - truhla s lootem")
-    print("- ▮ - dveře do dalšího patra")
-    print("Vstup na pole s ním automaticky interaguje!\n")
+    # ===== NADPIS =====
+    lines.append("\033[96m=== PŘÍRUČKA HRY ===\033[0m")
+    lines.append("")
 
-    print("\033[93mInventář:\033[0m")
-    print("V inventáři najdeš své vybavení a karty, které ti poskytuje.")
-    print("Každé vybavení může obsahovat jednu nebo více karet.")
-    print("Pokud máš aktivní synergie mezi vybavením, zobrazí se zvlášť modře.")
-    print("Použití inventáře:")
-    print("- Můžeš si zde prohlédnout aktuální deck")
-    print("- Můžeš se podívat co jednotlivé vybavená umí")
-    print("- Můžeš měnit své aktuálně používané vybavení")
-    print("- Můžeš si zde spravovat své naučené schopnosti\n")
+    # ===== OVLÁDÁNÍ =====
+    lines.append("\033[93mOvládání:\033[0m")
+    lines.append("WASD - pohyb po mapě")
+    lines.append("Q - ukončit hru")
+    lines.append("I - otevřít inventář")
+    lines.append("H - zobrazit tuto příručku")
+    lines.append("V boji vyber číslo karty nebo ENTER pro konec tahu")
+    lines.append("")
 
-    print("\033[93mSouboj:\033[0m")
-    print("- V souboji hraješ se svým balíčkem, který obsahuje karty,\n"
-          "dané tvým akutálním vybavením a aktivními schopnostmi.")
-    print("- Po vyčerpání energie je tah předán nepříteli, který také má svůj balíček.")
-    print("- Boj pokračuje dokud jedna ze stran není úplně poražena")
-    print("- Každá zahrátá karta je odložena na odhazovací balíček, který je domíchán, jakmile\n"
-          "dobereš svůj balíček.")
-    print("- Kdykoliv zamícháš v boji odhazovací balíček, je v rámci souboje tvojí postavě přidána únava.\n"
-          "Při každém zamíchání tvoje postavautrpí zranění ve výši tvé únavy.\n")
+    # ===== MAPA =====
+    lines.append("\033[93mMapa a ikony:\033[0m")
+    lines.append("- # - stěna")
+    lines.append("- . - průchozí dlaždice / chodba")
+    lines.append("- P - tvoje pozice")
+    lines.append("- E - nepřítel")
+    lines.append("- ^ - ohniště, doplní část zdraví")
+    lines.append("- ▣ - truhla s lootem")
+    lines.append("- ▮ - dveře do dalšího patra")
+    lines.append("Vstup na pole s ním automaticky interaguje!")
+    lines.append("")
 
-    print("\033[93mLevly:\033[0m")
-    print("- Za porážení nepřátel dostáváš zkušenosti")
-    print("- Při postupu na novou úroveň se zvýší tvé dosavadní maximální zdraví a")
-    print("máš možnost si vybrat jednu ze tří schopností, která se ti odemkne.\n")
+    # ===== INVENTÁŘ =====
+    lines.append("\033[93mInventář:\033[0m")
+    lines.append(
+        "V inventáři najdeš své vybavení a karty, které ti poskytuje.")
+    lines.append("Každé vybavení může obsahovat jednu nebo více karet.")
+    lines.append(
+        "Pokud máš aktivní synergie mezi vybavením, zobrazí se zvlášť modře.")
+    lines.append("Použití inventáře:")
+    lines.append("- Můžeš si zde prohlédnout aktuální deck")
+    lines.append("- Můžeš se podívat co jednotlivé vybavená umí")
+    lines.append("- Můžeš měnit své aktuálně používané vybavení")
+    lines.append("- Můžeš si zde spravovat své naučené schopnosti")
+    lines.append("")
 
-    print("\033[93mTypy karet:\033[0m")
-    print("- Útočné (DMG) - způsobují poškození nepříteli")
-    print("- Obranné (BLOCK) - přidávají obranu na tento tah")
-    print("- Efekty (EFFECT) - aplikují stavové efekty jako Omráčení, Úhyb, Otrava")
-    print("- Speciální - např. DRAW (táhni karty), DISCARD (zahoď karty)\n")
+    # ===== SOUBOJ =====
+    lines.append("\033[93mSouboj:\033[0m")
+    lines.append("- V souboji hraješ se svým balíčkem, který obsahuje karty,")
+    lines.append("dané tvým akutálním vybavením a aktivními schopnostmi.")
+    lines.append(
+        "- Po vyčerpání energie je tah předán nepříteli, který také má svůj balíček.")
+    lines.append("- Boj pokračuje dokud jedna ze stran není úplně poražena")
+    lines.append(
+        "- Každá zahrátá karta je odložena na odhazovací balíček, který je domíchán, jakmile")
+    lines.append("dobereš svůj balíček.")
+    lines.append(
+        "- Kdykoliv zamícháš v boji odhazovací balíček, je v rámci souboje tvojí postavě přidána únava.")
+    lines.append(
+        "Při každém zamíchání tvoje postavautrpí zranění ve výši tvé únavy.")
+    lines.append("")
 
-    print("\033[93mEfekty:\033[0m")
-    print("- Omráčení (Stun) - jednotka vynechá tah")
-    print("- Úhyb (Dodge) - šance vyhnout se útoku")
-    print("- Otrava (Poison) - poškození v průběhu několika kol")
-    print("- Trny - útok na toho, kdo má tento efekt, útočníkovi způsobí zranění\n")
+    # ===== LEVLY =====
+    lines.append("\033[93mLevly:\033[0m")
+    lines.append("- Za porážení nepřátel dostáváš zkušenosti")
+    lines.append(
+        "- Při postupu na novou úroveň se zvýší tvé dosavadní maximální zdraví a")
+    lines.append(
+        "máš možnost si vybrat jednu ze tří schopností, která se ti odemkne.")
+    lines.append("")
 
-    print("\033[93mSynergie:\033[0m")
-    print("- Když používáš určité kombinace vybavení, získáš bonusové karty")
-    print("- Např. 'Krátký Meč + Štít' = karta 'Útok a kryt'\n")
+    # ===== TYPY KARET =====
+    lines.append("\033[93mTypy karet:\033[0m")
+    lines.append("- Útočné (DMG) - způsobují poškození nepříteli")
+    lines.append("- Obranné (BLOCK) - přidávají obranu na tento tah")
+    lines.append(
+        "- Efekty (EFFECT) - aplikují stavové efekty jako Omráčení, Úhyb, Otrava")
+    lines.append(
+        "- Speciální - např. DRAW (táhni karty), DISCARD (zahoď karty)")
+    lines.append("")
 
-    print("\033[93mCíl hry:\033[0m")
-    print("- Zlepšuj svůj deck s pomocí silnějšího vybavení")
-    print("- Hledej vstupy do dalších částí mapy a levlů\n")
+    # ===== EFEKTY =====
+    lines.append("\033[93mEfekty:\033[0m")
+    lines.append("- Omráčení (Stun) - jednotka vynechá tah")
+    lines.append("- Úhyb (Dodge) - šance vyhnout se útoku")
+    lines.append("- Otrava (Poison) - poškození v průběhu několika kol")
+    lines.append(
+        "- Trny - útok na toho, kdo má tento efekt, útočníkovi způsobí zranění")
+    lines.append("")
 
-    print("\033[93mTipy:\033[0m")
-    print("- Chytře využívej svou energii na daný tah")
-    print("- Kombinuj vybavení pro odalování sinergií")
-    print("- Studuj nepřátele, každý má svůj vlastní balíček karet a ti silnější dokonce i strategie\n")
+    # ===== SYNERGIE =====
+    lines.append("\033[93mSynergie:\033[0m")
+    lines.append(
+        "- Když používáš určité kombinace vybavení, získáš bonusové karty")
+    lines.append("- Např. 'Krátký Meč + Štít' = karta 'Útok a kryt'")
+    lines.append("")
 
-    input("Stiskni ENTER pro návrat do hry...")
+    # ===== CÍL =====
+    lines.append("\033[93mCíl hry:\033[0m")
+    lines.append("- Zlepšuj svůj deck s pomocí silnějšího vybavení")
+    lines.append("- Hledej vstupy do dalších částí mapy a levlů")
+    lines.append("")
+
+    # ===== TIPY =====
+    lines.append("\033[93mTipy:\033[0m")
+    lines.append("- Chytře využívej svou energii na daný tah")
+    lines.append("- Kombinuj vybavení pro odalování sinergií")
+    lines.append(
+        "- Studuj nepřátele, každý má svůj vlastní balíček karet a ti silnější dokonce i strategie")
+    lines.append("")
+
+    lines.append("Stiskni ENTER pro návrat do hry...")
+
+    render(lines)
+    input()
 
 
 def show_bestiary(player):
     while True:
         clear_screen()
-        print("\n=== BESTIÁŘ ===\n")
+        core.print_center_block("\n=== BESTIÁŘ ===\n")
 
         enemies = list(player.bestiary.keys())
 
         for i, name in enumerate(enemies):
             kills = player.bestiary[name]["kills"]
-            print(f"{i+1}. {name} (Zabit: {kills}x)")
+            core.print_center_block(f"{i+1}. {name} (Zabit: {kills}x)")
 
-        print("\n(Vyber nepřítele = 1-X, q = zpět): ")
+        core.print_center_block("\n(Vyber nepřítele = 1-X, q = zpět): ")
         choice = input("\n> ")
 
         if choice == "q":
@@ -793,7 +826,7 @@ def show_bestiary(player):
             index = int(choice) - 1
             if 0 <= index < len(enemies):
                 show_enemy_detail(player, enemies[index])
-        print()
+        core.print_center_block()
 
 
 def show_enemy_detail(player, enemy_name):
@@ -803,21 +836,21 @@ def show_enemy_detail(player, enemy_name):
     kills = data['kills']
     info = data['info']
 
-    print(f"\n=== {enemy_name} ===")
-    print(f"Zabit: {kills}x\n")
+    core.print_center_block(f"\n=== {enemy_name} ===")
+    core.print_center_block(f"Zabit: {kills}x\n")
 
     all_cards = data.get("all_cards", [])
     seen_cards = data["seen_cards"]
 
     if kills >= 1:
-        print(f"Karty ({len(seen_cards)}/{len(all_cards)}):")
+        core.print_center_block(f"Karty ({len(seen_cards)}/{len(all_cards)}):")
         for card in all_cards:
             if card in seen_cards:
-                print(f" - {card}")
+                core.print_center_block(f" - {card}")
             else:
-                print(" - ???")
+                core.print_center_block(" - ???")
     else:
-        print("\n???")
+        core.print_center_block("\n???")
 
     if kills >= 1:
         print_section("Popis", info.get('description', '???'))
@@ -826,103 +859,125 @@ def show_enemy_detail(player, enemy_name):
         print_section("Lore", info.get('lore', '???'))
     else:
         text = "??? (zabij více nepřátel)"
-        print("\n" + "LORE".center(60))
-        print("-" * 60)
-        print(text.center(60))
+        core.print_center_block("\n" + "LORE".center(60))
+        core.print_center_block("-" * 60)
+        core.print_center_block(text.center(60))
 
     if kills >= 6:
         print_section("Extra lore", info.get('extra_lore', '???'))
     else:
         text = "??? (zabij více nepřátel)"
-        print("\n" + "EXTRA LORE".center(60))
-        print("-" * 60)
-        print(text.center(60))
+        core.print_center_block("\n" + "EXTRA LORE".center(60))
+        core.print_center_block("-" * 60)
+        core.print_center_block(text.center(60))
 
     input("\nENTER pro návrat...")
 
 
 def show_inventory(player):
+    def render(lines):
+        core.print_center_block("\n".join(lines))
+
     while True:
         clear_screen()
 
-        print("\n=== INVENTÁŘ ===")
+        lines = []
 
-        print("\nVybavené:")
+        # ===== INVENTÁŘ =====
+        lines.append("=== INVENTÁŘ ===")
+        lines.append("")
+        lines.append("Vybavené:")
+
         for slot, items in player.slots.items():
             for i, item in enumerate(items):
                 name = item.name if item else "\033[90mPrázdné\033[0m"
-                print(f"{slot} [{i}]: {name}")
+                lines.append(f"{slot} [{i}]: {name}")
+            lines.append("")
 
-            print()
-
-        print("\nBatoh:")
+        lines.append("Batoh:")
         if not player.inventory:
-            print("Prázdný")
+            lines.append("Prázdný")
         else:
             for i, eq in enumerate(player.inventory):
-                print(f"{i}: {eq.name} ({eq.slot_type})")
+                lines.append(f"{i}: {eq.name} ({eq.slot_type})")
 
-        print("\n1: Detail itemu")
-        print("2: Vybavit")
-        print("3: Sundat")
-        print("4: Prohlédnout deck")
-        print("5: Prohlédnout schopnosti")
-        print("6: Konec")
+        lines.append("")
+        lines.append("1: Detail itemu")
+        lines.append("2: Vybavit")
+        lines.append("3: Sundat")
+        lines.append("4: Prohlédnout deck")
+        lines.append("5: Prohlédnout schopnosti")
+        lines.append("6: Konec")
+
+        render(lines)
 
         choice = input("> ")
 
+        # ===== DETAIL ITEMU =====
         if choice == "1":
             if not player.inventory:
-                print("Batoh je prázdný!")
-                input("ENTER pro pokračování...")
+                render(["Batoh je prázdný!", "", "ENTER pro pokračování..."])
+                input()
                 continue
 
             idx = get_valid_index(
                 "Index itemu z batohu: ", len(player.inventory))
             eq = player.inventory[idx]
 
-            print(f"\n--- {eq.name} ---")
+            lines = [f"--- {eq.name} ---"]
+            render(lines)
             core.print_cards(eq.cards)
 
             input("ENTER pro pokračování...")
 
+        # ===== VYBAVIT =====
         elif choice == "2":
             if not player.inventory:
-                print("Batoh je prázdný!")
-                input("ENTER pro pokračování...")
+                render(["Batoh je prázdný!", "", "ENTER pro pokračování..."])
+                input()
                 continue
+
             idx = get_valid_index(
                 "Index itemu z batohu: ", len(player.inventory))
             player.equip_item(player.inventory[idx])
             player.build_deck()
 
+        # ===== SUNDAT =====
         elif choice == "3":
             slot = input("Slot (hand/body/belt/pocket/ring): ")
+
             if slot not in player.slots:
-                print("Neplatný slot!")
-                input("ENTER pro pokračování...")
+                render(["Neplatný slot!", "", "ENTER pro pokračování..."])
+                input()
                 continue
 
-            print(f"\n{slot} obsah:")
+            lines = [f"{slot} obsah:"]
             for i, item in enumerate(player.slots[slot]):
                 name = item.name if item else "Prázdné"
-                print(f"[{i}]: {name}")
+                lines.append(f"[{i}]: {name}")
 
             if all(item is None for item in player.slots[slot]):
-                print("Slot je prázdný!")
-                input("ENTER pro pokračování...")
+                lines.append("")
+                lines.append("Slot je prázdný!")
+                render(lines + ["", "ENTER pro pokračování..."])
+                input()
                 continue
+
+            render(lines)
 
             idx = get_valid_index(
                 "Index slotu k odbavení: ", len(player.slots[slot]))
             player.unequip_item(slot, idx)
             player.build_deck()
 
+        # ===== DECK =====
         elif choice == "4":
             clear_screen()
             player.build_deck()
 
-            print("\n--- Aktuální deck ---")
+            lines = ["--- Aktuální deck ---"]
+            render(lines)
+
             deck_exists = False
             active_synergies = []
 
@@ -932,25 +987,27 @@ def show_inventory(player):
                     if not eq:
                         continue
 
-                    # dvouruční item – zobraz jen jednou
                     if eq.two_handed:
                         if id(eq) in added_items:
                             continue
                         added_items.add(id(eq))
 
                     deck_exists = True
-                    print(f"\n--- {eq.name} ---")
+                    render([f"--- {eq.name} ---"])
                     core.print_cards(eq.cards)
 
-            equipment_names = [item.name for slot in player.slots.values()
-                               for item in slot if item]
+            equipment_names = [
+                item.name for slot in player.slots.values()
+                for item in slot if item
+            ]
+
             for synergy in core.SYNERGIES:
                 if all(req in equipment_names for req in synergy["requires"]):
                     active_synergies.append(synergy)
 
             for synergy in active_synergies:
-                print(
-                    f"\n\033[94m--- Aktivní synergie: {', '.join(synergy['requires'])} ---\033[0m")
+                render(
+                    [f"\033[94m--- Aktivní synergie: {', '.join(synergy['requires'])} ---\033[0m"])
                 core.print_cards(synergy["cards"])
                 deck_exists = True
 
@@ -960,35 +1017,42 @@ def show_inventory(player):
             ]
 
             if active_card_abilities:
-                print("\n\033[96m--- Karty schopností ---\033[0m")
+                render(["\033[96m--- Karty schopností ---\033[0m"])
                 for ability in active_card_abilities:
-                    print(f"{ability.name}: {ability.description}")
+                    render([f"{ability.name}: {ability.description}"])
                     core.print_cards(ability.cards)
-                    print()
+                    render([""])
                     deck_exists = True
 
             if not deck_exists:
-                print("Deck je prázdný!")
+                render(["Deck je prázdný!"])
 
             input("\nENTER pro návrat do inventáře...")
 
+        # ===== SCHOPNOSTI =====
         elif choice == "5":
             while True:
                 clear_screen()
-                print("\n=== SCHOPNOSTI ===")
+
+                lines = ["=== SCHOPNOSTI ==="]
 
                 if not player.abilities:
-                    print("Zatím nemáš žádné schopnosti.")
-                    input("\nENTER pro návrat do inventáře...")
-                    return
+                    lines.append("Zatím nemáš žádné schopnosti.")
+                    render(lines + ["", "ENTER pro návrat..."])
+                    input()
+                    break
 
                 for i, ability in enumerate(player.abilities):
                     status = "Aktivní" if getattr(
                         ability, "active", True) else "Neaktivní"
-                    print(f"{i}: {ability.name} ({status}) - {ability.description}")
+                    lines.append(
+                        f"{i}: {ability.name} ({status}) - {ability.description}")
 
-                print("\n1: Přepnout aktivitu schopnosti")
-                print("2: Konec")
+                lines.append("")
+                lines.append("1: Přepnout aktivitu schopnosti")
+                lines.append("2: Konec")
+
+                render(lines)
 
                 choice = input("> ")
 
@@ -997,17 +1061,22 @@ def show_inventory(player):
                         "Index schopnosti: ", len(player.abilities))
                     ability = player.abilities[idx]
                     ability.active = not getattr(ability, "active", True)
+
                     status = "aktivní" if ability.active else "neaktivní"
-                    print(f"{ability.name} je nyní {status}.")
-                    input("ENTER pro pokračování...")
+                    render(
+                        [f"{ability.name} je nyní {status}.", "", "ENTER..."])
+                    input()
+
                 elif choice == "2":
                     break
 
+        # ===== KONEC =====
         elif choice == "6":
             break
 
         else:
-            print("Neplatná volba!")
+            render(["Neplatná volba!", "", "ENTER pro pokračování..."])
+            input()
 
 
 def get_random_abilities(all_abilities, count=3):
@@ -1042,16 +1111,18 @@ def level_up(self):
 
     while True:
         clear_screen()
-        print("\n\033[94m=== DOSÁHL JSI NOVÉ ÚROVNĚ! ===\033[0m")
-        print("Tvé dosavadní maximalní zdraví se zvýšílo o 5.\n")
-        print("Vyber si jednu schopnost:\n")
+        core.print_center_block(
+            "\n\033[94m=== DOSÁHL JSI NOVÉ ÚROVNĚ! ===\033[0m")
+        core.print_center_block(
+            "Tvé dosavadní maximalní zdraví se zvýšílo o 5.\n")
+        core.print_center_block("Vyber si jednu schopnost:\n")
 
         for i, ability in enumerate(choices, 1):
-            print(
+            core.print_center_block(
                 f"\033[96m{i}) {ability.name} - {ability.description}\033[0m")
             if getattr(ability, "type", None) == "card":
                 core.print_cards(ability.cards)
-            print()
+            core.print_center_block()
 
         choice = input("\nTvoje volba: ")
 
@@ -1060,7 +1131,7 @@ def level_up(self):
             if 1 <= choice <= len(choices):
                 selected = choices[choice - 1]
                 selected.apply(self)
-                print(f"\nZískal jsi: {selected.name}")
+                core.print_center_block(f"\nZískal jsi: {selected.name}")
                 input("Pokračuj...")
                 break
 
@@ -1070,7 +1141,7 @@ def get_valid_index(prompt, max_value):
         choice = input(prompt)
 
         if not choice.isdigit():
-            print("Zadej číslo!")
+            core.print_center_block("Zadej číslo!")
             continue
 
         idx = int(choice)
@@ -1078,7 +1149,7 @@ def get_valid_index(prompt, max_value):
         if 0 <= idx < max_value:
             return idx
         else:
-            print("Index mimo rozsah!")
+            core.print_center_block("Index mimo rozsah!")
 
 
 def move_player(cmd, x, y, game_map):
@@ -1095,7 +1166,7 @@ def move_player(cmd, x, y, game_map):
 
     # kontrola průchodnosti
     if game_map.grid[new_y][new_x] == "#":
-        print("Nemůžeš jít do zdi!")
+        core.print_center_block("Nemůžeš jít do zdi!")
         input("ENTER pro pokračování...")
         return x, y  # zůstane na původním poli
     else:
@@ -1139,13 +1210,13 @@ def choose_enemy(enemies):
         return alive[0]
 
     for i, e in enumerate(alive):
-        print(f"{i}: {e.name} (HP: {e.hp})")
+        core.print_center_block(f"{i}: {e.name} (HP: {e.hp})")
 
     while True:
         choice = input("Vyber nepřítele: ")
 
         if not choice.isdigit():
-            print("Neplatná volba")
+            core.print_center_block("Neplatná volba")
             continue
 
         index = int(choice)
@@ -1156,7 +1227,6 @@ def choose_enemy(enemies):
 
 def combat(player, enemies):
 
-    # ===== precomabat prepare ======
     player.reset_combat()
     for enemy in enemies:
         enemy.reset_combat()
@@ -1168,12 +1238,11 @@ def combat(player, enemies):
     first_turn = True
 
     global combat_xp
-    combat_xp = 1+player.dungeon_level
-
-    # ===== main combat loop ======
+    combat_xp = 1 + player.dungeon_level
 
     while player.hp > 0 and any(e.hp > 0 for e in enemies):
 
+        # ===== BESTIÁŘ =====
         for enemy in enemies:
             if enemy.name not in player.bestiary:
                 player.bestiary[enemy.name] = {
@@ -1189,7 +1258,11 @@ def combat(player, enemies):
                 }
 
         clear_screen()
-        print("\n--- Nové kolo ---")
+
+        # =======================
+        # START KOLA UI
+        # =======================
+        lines = ["--- Nové kolo ---", ""]
 
         player.block = 0
         player.combo_count = 0
@@ -1199,138 +1272,147 @@ def combat(player, enemies):
                 ability.effect(player)
 
         player.block += player.saved_block
-
         player.saved_block = 0
 
-        print(
-            f"- {player.name} (HP: {player.hp}, {core.Colors.GRAY}Block: {player.block}{core.Colors.RESET}, Energy: {player.energy}"
-            + (f", Total_strenght: {player.strenght + player.temporary_strenght}"
-               if (player.strenght + player.temporary_strenght) != 0 else "")
-            + (f", Combo: {player.combo_count}"if (player.combo_count) != 0 else "")
-            + f"){core.format_status_effects(player)}"
-        )
-        print("\nNepřátelé:")
+        # ===== PLAYER STATUS =====
+        p_line = f"- {player.name} (HP: {player.hp}, Block: {player.block}, Energy: {player.energy}"
+
+        total_str = player.strenght + player.temporary_strenght
+        if total_str != 0:
+            p_line += f", Total_strenght: {total_str}"
+
+        if player.combo_count:
+            p_line += f", Combo: {player.combo_count}"
+
+        p_line += f"){core.format_status_effects(player)}"
+
+        lines.append(p_line)
+        lines.append("")
+        lines.append("Nepřátelé:")
+
+        # ===== ENEMIES STATUS =====
         for e in enemies:
             if e.hp > 0:
-                print(
-                    f"- {e.name} (HP: {e.hp}, {core.Colors.GRAY}Block: {e.block}{core.Colors.RESET}"
-                    + (f", Total_strenght: {e.strenght + e.temporary_strenght}"
-                       if (e.strenght + e.temporary_strenght) != 0 else "")
-                    + f"){core.format_status_effects(e)}"
-                )
-        print()
+                e_line = f"- {e.name} (HP: {e.hp}, Block: {e.block}"
 
-        # ===== PLAYER =====
+                total_str = e.strenght + e.temporary_strenght
+                if total_str != 0:
+                    e_line += f", Total_strenght: {total_str}"
+
+                e_line += f"){core.format_status_effects(e)}"
+                lines.append(e_line)
+
+        render(lines)
+
+        # =======================
+        # PLAYER TURN
+        # =======================
         if player.is_stunned():
-            print(f"{player.name} vynechává tah kvůli omráčení!")
-            input("ENTER pro pokračování...")
+            render([f"{player.name} vynechává tah kvůli omráčení!"])
+            input("ENTER...")
             player.process_status()
-            if player.hp <= 0:
-                print("Prohrál jsi!")
-                return False
+            continue
+
+        player.process_status()
+
+        if player.hp <= 0:
+            render(["Prohrál jsi!"])
+            input("ENTER...")
+            return False
+
+        if first_turn:
+            player.draw(3)
+            render([f"Narazil jsi na {len(enemies)} nepřátel"])
+            first_turn = False
         else:
-            player.process_status()
-            if player.hp <= 0:
-                print("Prohrál jsi!")
-                return False
-            if first_turn:
-                player.draw(3)
-                print(f"Narazil jsi na {len(enemies)} nepřátel")
-                first_turn = False
-            else:
-                player.draw(2 + player.extra_draw)
-                if player.hp <= 0:
-                    print("Prohrál jsi!")
-                    input("ENTER pro pokračování...")
-                    return False
+            player.draw(2 + player.extra_draw)
 
-            character.Character.player_turn(player, enemies)
+        character.Character.player_turn(player, enemies)
 
-            boss = next((e for e in enemies if e.is_boss), None)
+        # =======================
+        # CHECK BOSS / WIN
+        # =======================
+        boss = next((e for e in enemies if e.is_boss), None)
 
-            if player.hp <= 0:
-                print("Prohrál jsi!")
-                input("ENTER pro pokračování...")
-                return False
+        if boss and boss.hp <= 0:
+            render(["Porazil jsi bosse!"])
+            input("ENTER...")
+            for enemy in enemies:
+                if enemy.name in player.bestiary and enemy.hp <= 0:
+                    player.bestiary[enemy.name]["kills"] += 1
+            return True
 
-            if boss:
-                # boss existuje, souboj končí ihned jeho smrtí
-                if boss.hp <= 0:
-                    print("Porazil jsi bosse!")
-                    input("ENTER pro pokračování...")
-                    for enemy in enemies:
-                        if enemy.name in player.bestiary and enemy.hp <= 0:
-                            player.bestiary[enemy.name]["kills"] += 1
-                    return True
-            else:
-                # žádný boss – klasický konec souboje, všichni nepřátelé mrtví
-                if all(e.hp <= 0 for e in enemies):
-                    print("Vyhrál jsi!")
-                    input("ENTER pro pokračování...")
-                    for enemy in enemies:
-                        if enemy.name in player.bestiary and enemy.hp <= 0:
-                            player.bestiary[enemy.name]["kills"] += 1
-                    return True
+        if not boss and all(e.hp <= 0 for e in enemies):
+            render(["Vyhrál jsi!"])
+            input("ENTER...")
+            for enemy in enemies:
+                if enemy.name in player.bestiary and enemy.hp <= 0:
+                    player.bestiary[enemy.name]["kills"] += 1
+            return True
 
+        # =======================
+        # ENEMY TURN HEADER
+        # =======================
         clear_screen()
-        print(f"\n{core.Colors.RED}--- Nepřátelský tah ---{core.Colors.RESET}")
-        print(
-            f"- {player.name} (HP: {player.hp}, {core.Colors.GRAY}Block: {player.block}{core.Colors.RESET}, Energy: {player.energy}"
-            + (f", Total_strenght: {player.strenght + player.temporary_strenght}"
-               if (player.strenght + player.temporary_strenght) != 0 else "")
-            + f"){core.format_status_effects(player)}"
-        )
-        print("\nNepřátelé:")
+        render([
+            f"{core.Colors.RED}--- Nepřátelský tah ---{core.Colors.RESET}",
+            ""
+        ])
+
+        # ===== ENEMY STATUS =====
+        lines = [
+            p_line,
+            "",
+            "Nepřátelé:"
+        ]
+
         for e in enemies:
             if e.hp > 0:
-                print(
-                    f"- {e.name} (HP: {e.hp}, {core.Colors.GRAY}Block: {e.block}{core.Colors.RESET}"
-                    + (f", Total_strenght: {e.strenght + e.temporary_strenght}"
-                       if (e.strenght + e.temporary_strenght) != 0 else "")
-                    + f"){core.format_status_effects(e)}"
-                )
+                e_line = f"- {e.name} (HP: {e.hp}, Block: {e.block}"
+                total_str = e.strenght + e.temporary_strenght
+                if total_str != 0:
+                    e_line += f", Total_strenght: {total_str}"
+                e_line += f"){core.format_status_effects(e)}"
+                lines.append(e_line)
+
+        render(lines)
+
         player.show_hand()
 
+        # =======================
+        # ENEMY ACTIONS
+        # =======================
         for enemy in enemies:
             for ability in enemy.abilities:
                 if ability.type == "passive" and ability.trigger == "after_opponent_turn" and ability.active:
                     ability.effect(enemy)
 
-        # ===== ENEMY =====
-        print("\n--- Nepřátelé hrají ---\n")
+        render(["--- Nepřátelé hrají ---"])
+
         for enemy in enemies:
             enemy.block = 0
 
-        # start of turn ability později
-
         for enemy in enemies:
             enemy.block += enemy.saved_block
-
-        for enemy in enemies:
             enemy.saved_block = 0
 
         for enemy in enemies[:]:
             if enemy.hp <= 0:
                 continue
 
-            # Zpracování stunu
             if enemy.is_stunned():
-                print(
-                    f"{core.Colors.YELLOW}{enemy.name} je omráčen!{core.Colors.RESET}")
+                render([f"{enemy.name} je omráčen!"])
                 enemy.process_status()
-                if enemy.hp <= 0:
-                    continue
                 continue
 
             enemy.process_status()
+
             if enemy.hp <= 0:
                 continue
 
             if enemy.ai:
-                # nepřátelé s prioritami hraných karet
                 enemy.ai(enemy, player, enemies)
             else:
-                # běžní nepřátelé
                 enemy.draw(enemy.actions)
 
                 for _ in range(enemy.actions):
@@ -1343,13 +1425,9 @@ def combat(player, enemies):
                     if card.target_type == "self":
                         target = enemy
                     elif card.target_type == "ally":
-
                         allies = [e for e in enemies if e.hp >
                                   0 and e != enemy]
-                        if allies:
-                            target = random.choice(allies)
-                        else:
-                            target = enemy
+                        target = random.choice(allies) if allies else enemy
                     else:
                         target = player
 
@@ -1361,53 +1439,24 @@ def combat(player, enemies):
                         player=player
                     )
 
-            boss = next((e for e in enemies if e.is_boss), None)
-
-            if player.hp <= 0:
-                print("Prohrál jsi!")
-                input("ENTER pro pokračování...")
-                return False
-
-            if boss:
-                # boss existuje, souboj končí ihned jeho smrtí
-                if boss.hp <= 0:
-                    print("Porazil jsi bosse!")
-                    input("ENTER pro pokračování...")
-                    for enemy in enemies:
-                        if enemy.name in player.bestiary and enemy.hp <= 0:
-                            player.bestiary[enemy.name]["kills"] += 1
-                    return True
-            else:
-                # žádný boss – klasický konec souboje, všichni nepřátelé mrtví
-                if all(e.hp <= 0 for e in enemies):
-                    print("Vyhrál jsi!")
-                    input("ENTER pro pokračování...")
-                    for enemy in enemies:
-                        if enemy.name in player.bestiary and enemy.hp <= 0:
-                            player.bestiary[enemy.name]["kills"] += 1
-                    return True
-
-            for ability in player.abilities:
-                if ability.trigger == "after_opponent_turn" and ability.active:
-                    ability.effect(player)
-
-        input("Stiskni cokoliv pro vstup do dalšího kola:")
+        input("Stiskni cokoliv pro další kolo:")
 
 
 def select_starting_build(player):
     while True:
         clear_screen()
-        print("\n\033[94m=== VYBER POSTAVU ZA KTEROU CHCEŠ HRÁT: ===\033[0m")
-        print("1) Voják")
-        print("2) Kultista")
-        print("3) Mág (Připravuje se)")
+        core.print_center_block(
+            "\n\033[94m=== VYBER POSTAVU ZA KTEROU CHCEŠ HRÁT: ===\033[0m")
+        core.print_center_block("1) Voják")
+        core.print_center_block("2) Kultista")
+        core.print_center_block("3) Mág (Připravuje se)")
 
         choice = input("> ")
 
         if choice == "1":
             clear_screen()
 
-            print_box(
+            core.print_box(
                 "VOJÁK",
                 [
                     "HP: 20",
@@ -1443,7 +1492,7 @@ def select_starting_build(player):
         elif choice == "2":
             clear_screen()
 
-            print_box(
+            core.print_box(
                 "KULTISTKA",
                 [
                     "HP: 16",
@@ -1474,7 +1523,7 @@ def select_starting_build(player):
         elif choice == "3":
             clear_screen()
 
-            print_box(
+            core.print_box(
                 "MÁG",
                 [
                     "HP: 14",
@@ -1505,11 +1554,11 @@ def select_starting_build(player):
                 return
 
         else:
-            print("Neplatná volba.")
+            core.print_center_block("Neplatná volba.")
 
 
 # ===== MAIN LOOP ========
-DEBUG_BOSS_FIGHT = True
+DEBUG_BOSS_FIGHT = False
 
 clear_screen()
 player = character.Character("Hráč", 20)
@@ -1530,17 +1579,17 @@ game_map.generate_objects(2, random.randint(1, 3), player_x, player_y,)
 game_map.generate_enemies_in_corridors(2, player_x, player_y)
 
 # ===== DEBUG BOSS FIGHT =====
-"""if DEBUG_BOSS_FIGHT:
+if DEBUG_BOSS_FIGHT:
     boss = monsters.create_boss_group(player.dungeon_level)
 
     survived = combat(player, boss)
 
     if not survived:
-        print("Konec hry (debug boss)")
+        core.print_center_block("Konec hry (debug boss)")
         exit()
 
-    print("Boss poražen (debug), pokračuje hra...")
-    input("ENTER...")"""
+    core.print_center_block("Boss poražen (debug), pokračuje hra...")
+    input("ENTER...")
 
 while player.hp > 0:
     clear_screen()
@@ -1549,7 +1598,7 @@ while player.hp > 0:
     GameMap.draw_map(game_map, player_x, player_y)
     # game_map.print_full_map()  # pouze při testování generování map
 
-    print(
+    core.print_center_block(
         f"\nHP: {player.hp}/{player.max_hp}, XP: {player.xp}, LVL: {player.lvl}, Dungeon lvl: {player.dungeon_level}")
 
     cmd = input(
@@ -1576,22 +1625,22 @@ while player.hp > 0:
     clear_screen()
     GameMap.update_visibility(game_map, player_x, player_y)
     GameMap.draw_map(game_map, player_x, player_y)
-    print(f"\nHP: {player.hp}")
+    core.print_center_block(f"\nHP: {player.hp}")
 
     status, messages = GameMap.handle_tile(
         game_map, player_x, player_y, player, combat)
 
     for msg in messages:
-        print(msg)
+        core.print_center_block(msg)
     if messages:
         input("ENTER pro pokračování...")
 
     if status == "player_dead":
-        print("Konec hry")
+        core.print_center_block("Konec hry")
         break
 
     if status == "enemy_dead":
         player.xp += combat_xp
         if player.is_level_up():
-            print("Získáváš nový level")
+            core.print_center_block("Získáváš nový level")
             level_up(player)

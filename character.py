@@ -94,7 +94,8 @@ class Character:
 
     def apply_fatigue(self):
         if self.fatigue > 0:
-            print(f"{self.name} cítí únavu a ztrácí {self.fatigue} HP!")
+            core.print_center_block(
+                f"{self.name} cítí únavu a ztrácí {self.fatigue} HP!")
             input("ENTER pro pokračování...")
             self.take_damage(self.fatigue, ignore_armor=True,
                              suppress_print=True)
@@ -114,21 +115,22 @@ class Character:
             )
             self.discard.append(card)
         else:
-            print("Neplatný index karty")
+            core.print_center_block("Neplatný index karty")
 
     def take_damage(self, amount, attacker=None, ignore_armor=False, suppress_print=False):
         for effect in self.status_effects:
             if isinstance(effect, core.Dodge):
                 if random.random() < effect.chance:
                     if not suppress_print:
-                        print(f"{self.name} se vyhnul útoku!")
+                        core.print_center_block(
+                            f"{self.name} se vyhnul útoku!")
                     return 0
 
         if ignore_armor:
             reduced = amount
             self.hp -= amount
             if not suppress_print:
-                print(
+                core.print_center_block(
                     f"{Colors.RED}{self.name} dostal {amount} dmg (ignoruje armor) (HP: {self.hp}{Colors.RESET})")
         else:
             reduced = max(amount - self.block, 0)
@@ -136,7 +138,7 @@ class Character:
             self.hp -= reduced
 
             if not suppress_print:
-                print(
+                core.print_center_block(
                     f"{Colors.RED}{self.name} dostal {reduced} dmg (HP: {self.hp}{Colors.RESET})")
 
         if attacker and reduced > 0:
@@ -146,7 +148,7 @@ class Character:
                         attacker.hp -= effect.damage
                         # attacker.take_damage(effect.damage, suppress_print=True)
                         if not suppress_print:
-                            print(
+                            core.print_center_block(
                                 f"{Colors.RED}{attacker.name} se při útoku poranil a dostal {effect.damage} dmg (HP: {attacker.hp}{Colors.RESET})")
 
         return reduced
@@ -155,7 +157,8 @@ class Character:
         # pokud je obouruční, musí být volné **oba hand sloty**
         if item.slot_type == "hand" and getattr(item, "two_handed", False):
             if any(self.slots["hand"]):
-                print("Potřebuješ volné oba hand sloty pro obouruční zbraň!")
+                core.print_center_block(
+                    "Potřebuješ volné oba hand sloty pro obouruční zbraň!")
                 input("ENTER pro pokračování...")
                 return False
             else:
@@ -163,7 +166,8 @@ class Character:
                 self.slots["hand"][1] = item
                 if item in self.inventory:
                     self.inventory.remove(item)
-                print(f"{self.name} vybavil obouruční zbraň {item.name}")
+                core.print_center_block(
+                    f"{self.name} vybavil obouruční zbraň {item.name}")
                 return True
 
         # standardní logika pro jednoruké zbraně
@@ -174,10 +178,10 @@ class Character:
                 if item in self.inventory:
                     self.inventory.remove(item)
                 if not suppress_print:
-                    print(f"{self.name} vybavil {item.name}")
+                    core.print_center_block(f"{self.name} vybavil {item.name}")
                 return True
 
-        print("Není volný slot")
+        core.print_center_block("Není volný slot")
         return False
 
     def unequip_item(self, slot_type, index):
@@ -189,14 +193,15 @@ class Character:
                 for i in range(len(self.slots["hand"])):
                     if self.slots["hand"][i] == item:
                         self.slots["hand"][i] = None
-                print(f"{self.name} sundal obouruční zbraň: {item.name}")
+                core.print_center_block(
+                    f"{self.name} sundal obouruční zbraň: {item.name}")
             else:
                 self.slots[slot_type][index] = None
-                print(f"{self.name} sundal {item.name}")
+                core.print_center_block(f"{self.name} sundal {item.name}")
 
             self.inventory.append(item)
         else:
-            print("Slot je prázdný")
+            core.print_center_block("Slot je prázdný")
 
     def reset_combat(self):
         self.deck = []
@@ -210,11 +215,12 @@ class Character:
 
     def add_block(self, amount):
         self.block += amount
-        print(f"{Colors.GRAY}{self.name} získal {amount} block{Colors.RESET}")
+        core.print_center_block(
+            f"{Colors.GRAY}{self.name} získal {amount} block{Colors.RESET}")
 
     def add_temporary_strenght(self, amount):
         self.temporary_strenght += amount
-        print(f"{self.name} získal {amount} dočasné síly")
+        core.print_center_block(f"{self.name} získal {amount} dočasné síly")
 
     def apply_effect(self, effect):
         self.status_effects.append(effect)
@@ -224,7 +230,7 @@ class Character:
         return any(isinstance(e, core.Stun) for e in self.status_effects)
 
     def show_hand(self):
-        print("\nTvoje karty:")
+        core.print_center_block("\nTvoje karty:")
         core.print_cards(self.hand)
 
     def has_playable_card(self):
@@ -238,61 +244,95 @@ class Character:
         player.energy -= player.reduced_energy
         player.reduced_energy = 0
 
+        def render(lines):
+            core.print_center_block("\n".join(lines))
+
         while player.hand and player.has_playable_card():
+
             clear_screen()
 
-            print(f"\n{Colors.GREEN}--- Tvůj tah ---{Colors.RESET}")
-            print(
-                f"- {player.name} (HP: {player.hp}, {Colors.GRAY}Block: {player.block}{Colors.RESET}, Energy: {player.energy}"
-                + (f", Total_strenght: {player.strenght + player.temporary_strenght}"
-                   if (player.strenght + player.temporary_strenght) != 0 else "")
-                + (f", Combo: {player.combo_count}"if (player.combo_count) != 0 else "")
-                + f"){format_status_effects(player)}"
+            # =========================
+            # UI BUILD
+            # =========================
+            lines = []
+
+            lines.append(f"{Colors.GREEN}--- Tvůj tah ---{Colors.RESET}")
+            lines.append("")
+
+            # ===== PLAYER =====
+            p_line = (
+                f"- {player.name} (HP: {player.hp}, "
+                f"{Colors.GRAY}Block: {player.block}{Colors.RESET}, "
+                f"Energy: {player.energy}"
             )
 
-            print("\nNepřátelé:")
+            total_str = player.strenght + player.temporary_strenght
+            if total_str != 0:
+                p_line += f", Total_strenght: {total_str}"
+
+            if player.combo_count:
+                p_line += f", Combo: {player.combo_count}"
+
+            p_line += f"){format_status_effects(player)}"
+
+            lines.append(p_line)
+            lines.append("")
+            lines.append("Nepřátelé:")
+
+            # ===== ENEMIES =====
             for e in enemies:
                 if e.hp > 0:
-                    print(
-                        f"- {e.name} (HP: {e.hp}, {Colors.GRAY}Block: {e.block}{Colors.RESET}"
-                        + (f", Total_strenght: {e.strenght + e.temporary_strenght}"
-                           if (e.strenght + e.temporary_strenght) != 0 else "")
-                        + f"){format_status_effects(e)}"
+                    e_line = (
+                        f"- {e.name} (HP: {e.hp}, "
+                        f"{Colors.GRAY}Block: {e.block}{Colors.RESET}"
                     )
 
+                    total_str = e.strenght + e.temporary_strenght
+                    if total_str != 0:
+                        e_line += f", Total_strenght: {total_str}"
+
+                    e_line += f"){format_status_effects(e)}"
+                    lines.append(e_line)
+
+            lines.append("")
+            lines.append(
+                f"Deck: {len(player.deck)}, Discard: {len(player.discard)}")
+            lines.append("")
+            lines.append("(ENTER = ukončit tah)")
+
+            # ===== RENDER =====
+            render(lines)
+
+            # ===== HAND =====
             player.show_hand()
 
-            print(
-                f"\nDeck: {len(player.deck)}, "
-                f"Discard: {len(player.discard)}"
-            )
-
-            print("\n(ENTER = ukončit tah)")
             choice = input("Vyber kartu: ")
 
             if choice == "":
                 break
 
             if not choice.isdigit():
-                print("Neplatná volba")
+                render(["Neplatná volba"])
                 input("ENTER...")
                 continue
 
             index = int(choice)
 
             if index < 0 or index >= len(player.hand):
-                print("Neplatná karta")
+                render(["Neplatná karta"])
                 input("ENTER...")
                 continue
 
             card = player.hand[index]
 
             if card.cost > player.energy:
-                print("Nedostatek energie")
+                render(["Nedostatek energie"])
                 input("ENTER...")
                 continue
 
-            # ===== TARGET =====
+            # =========================
+            # TARGET LOGIC
+            # =========================
             if card.target_type == "enemy":
                 target = choose_enemy(enemies)
                 player.play_card(index, target)
@@ -302,6 +342,7 @@ class Character:
 
             elif card.target_type == "all_enemies":
                 card_to_play = player.hand.pop(index)
+
                 for e in enemies:
                     if e.hp > 0:
                         card_to_play.play(
@@ -310,28 +351,28 @@ class Character:
                             enemies_list=enemies,
                             player=player
                         )
+
                 player.discard.append(card_to_play)
 
             player.energy -= card.cost
 
-            # ===== KONTROLY =====
+            # =========================
+            # END CHECKS
+            # =========================
             boss = next((e for e in enemies if e.is_boss), None)
 
             if player.hp <= 0:
                 return False
 
             if boss:
-                # boss existuje, souboj končí ihned jeho smrtí
                 if boss.hp <= 0:
                     return True
             else:
-                # žádný boss – klasický konec souboje, všichni nepřátelé mrtví
                 if all(e.hp <= 0 for e in enemies):
                     return True
 
-            print(f"\nZbývá energie: {player.energy}")
-
-            input("\nENTER pro pokračování...")
+            render([f"Zbývá energie: {player.energy}"])
+            input("ENTER pro pokračování...")
 
         return None
 
@@ -345,7 +386,8 @@ class Character:
                 new_effects.append(effect)
             else:
                 if self.hp > 0:
-                    print(f"{self.name} se zbavil efektu {effect.name}.")
+                    core.print_center_block(
+                        f"{self.name} se zbavil efektu {effect.name}.")
 
         self.status_effects = new_effects
 
@@ -360,13 +402,13 @@ def choose_enemy(enemies):
         return alive[0]
 
     for i, e in enumerate(alive):
-        print(f"{i}: {e.name} (HP: {e.hp})")
+        core.print_center_block(f"{i}: {e.name} (HP: {e.hp})")
 
     while True:
         choice = input("Vyber nepřítele: ")
 
         if not choice.isdigit():
-            print("Neplatná volba")
+            core.print_center_block("Neplatná volba")
             continue
 
         index = int(choice)
