@@ -1,15 +1,15 @@
 from core import Card, Stun, Poison, Dodge, Thorns, Equipment
 from character import Character
 
-# ===== Zbraně =====
+# ===== Zbraně pro vojáka =====
 
-wooden_staff= Equipment("Dřevěná hůl", "hand", [
-    Card("Krytí", block=3, target_type="self"),
-    Card("Krytí", block=3, target_type="self"),
-    Card("Úder a kryt", damage=2, block=3),
-    Card("Podražení nohou", damage=2, effect=Stun(1),
-         effect_chance=0.4, effect_on_damage=True),
+test_kill = Equipment("zabiják", "hand", [
+    Card("smrt", damage=99),
+    Card("smrt", damage=99),
+    Card("smrt", damage=99),
+    Card("smrt", damage=99),
 ])
+
 
 dagger = Equipment("Dýka", "hand", [
     Card("Bodnutí", damage=3),
@@ -60,13 +60,93 @@ poison_dagger = Equipment("Otrávená dýka", "hand", [
     Card("Bodnutí", damage=3)
 ])
 
+# ===== Zbraně pro kultistku =====
+
 cultistic_blade = Equipment("Kultistovo ostří", "hand", [
-    Card("Zářez", damage=2, combo=True ),
-    Card("Zářez", damage=2, combo=True ),
-    Card("Rituál", damage=2, energy=1, combo=True, target_type="self", cost=0),
+    Card("Zářez", damage=2, combo=1),
+    Card("Zářez", damage="combo", combo=1),
+    Card("Sek z vrchu", damage="combo", base=1, scale=1, combo=1),
     Card("Setnutí", damage="combo", scale=2),
 ])
+# Card("Rituál", self_damage=1, energy=1,
+#         combo=1, target_type="self", cost=0),
 
+bloodthirsty_tongue = Equipment("Krvežíznivý jazyk", "hand", [
+    Card("Zářez", damage=2, combo=1),
+    Card("Sátí", damage=2, lifesteal=1, combo=1),
+    Card("Krvavá daň", self_damage=3, combo=3, cost=0),
+    Card("Žízeň", damage="combo", lifesteal=1, scale=1, cost=2)
+])
+
+claw_dagger = Equipment("Dýka z drápu", "hand", [
+    Card("Bodnutí", damage=3, combo=1),
+    Card("Rituál", damage=1, energy=1, combo=1, target_type="self", cost=0),
+])
+
+sacrificial_blade = Equipment("Obětní čepel", "hand", [
+    Card("Řez do masa", damage=3, combo=1),
+    Card("Krvavý rituál", self_damage=2, energy=2, combo=1, cost=0),
+    Card("Bolestné probuzení", self_damage=3, draw=2, combo=2, cost=0),
+    Card("Masakr", damage="combo", scale=2)
+])
+
+blade_of_blood_frenzy = Equipment("Čepel krvavého šílenství", "hand", [
+    Card("Škrábanec", damage=1, combo=1, cost=0),
+    Card("Zuřivý sled", damage=2, combo=2),
+    Card("Zrychlený puls", energy=1, combo=2, target_type="self", cost=0),
+    Card("Vyvrcholení", damage="combo", scale=2)
+])
+
+forbidden_texts = Equipment("Zakázané texty", "hand", [
+    Card("Zakázaná slova", draw=2, combo=1),
+    Card("Šepot", draw=1, discard=1, combo=1, target_type="self", cost=0),
+    Card("Ztráta rozumu", self_damage=2, draw=3, combo=2),
+    Card("Kolaps mysli", damage="combo", scale=2)
+])
+
+ritual_sickle = Equipment("Obřadní srp", "hand", [
+    Card("Zářez", damage=2, combo=1),
+    Card("Zářez", damage=2, combo=1),
+    Card("Krvavý rituál", self_damage=2, combo=3, cost=0),
+    Card("Sklizeň", damage="combo", lifesteal=0.5),
+    Card("Krvavá žeň", damage="combo", scale=2, cost=2),
+], two_handed=True)
+
+serpent_spear = Equipment("Oštěp hadí bohyně", "hand", [
+    Card("Jedovaté bodnutí", damage=2, combo=1,
+         effect=Poison(2, 2), effect_on_damage=True),
+    Card("Hadí tanec", combo=2, target_type="self", cost=0),
+    Card("Uštknutí", damage=3, combo=1,
+         effect=Poison(2, 2), effect_on_damage=True),
+    Card("Hadí postoj", block=3, combo=1,
+         effect=Thorns(1, 3, 1), target_type="self"),
+    Card("Smrtící dávka", damage="combo", scale=2, cost=2),
+], two_handed=True)
+
+blood_vial = Equipment("Ampule s krví", "pocket", [
+    Card("Vypití krve", self_damage=1, combo=2, cost=0),
+])
+
+sacrificial_bone = Equipment("Obětní kost", "belt", [
+    Card("Vzpomínka na bolest", combo=3, cost=1, target_type="self"),
+])
+
+# ===== Zbraně pro mága =====
+
+wooden_staff = Equipment("Dřevěná hůl", "hand", [
+    Card("Krytí", block=3, target_type="self"),
+    Card("Úder a kryt", damage=2, block=3),
+    Card("Podražení nohou", damage=2, effect=Stun(1),
+         effect_chance=0.4, effect_on_damage=True),
+])
+
+an_untitled_book = Equipment("Bezejmená kniha", "hand", [
+    Card("Bariera", block=5, target_type="self"),
+    Card("Magická střela", damage=5),
+    Card("Pohled vědění", damage=3, draw=1),
+    Card("Koncentrace mysli", draw=3, discard=2, target_type="self"),
+    Card("Vlna přehlcení", damage=4, discard=1, target_type="all_enemies")
+])
 # ===== Štíty =====
 
 shield = Equipment("Štít", "hand", [
@@ -85,6 +165,16 @@ shield_with_spike = Equipment("Štít s bodcem", "hand", [
 padded_armor = Equipment("Vycpávaná zbroj", "body", [
     Card("Pokrytí", block=2, target_type="self"),
     Card("Pokrytí", block=2, target_type="self"),
+])
+
+ritual_skirt = Equipment("Obřadní suknice", "body", [
+    Card("Úhyb", block=1, effect=Dodge(0.6, 2), target_type="self"),
+    Card("Obřadní tanec", block=3, combo=2, target_type="self"),
+])
+
+old_robe = Equipment("Stará róba", "body", [
+    Card("Úhyb", block=1, effect=Dodge(0.6, 2), target_type="self"),
+    Card("Tajné kapsy", block=1, draw=2, target_type="self")
 ])
 
 # ===== Monstra =====
@@ -178,7 +268,8 @@ shield_e = Equipment("Štít (nepřátelský)", "hand", [
 
 set_of_traps = Equipment("Sada pastí", "belt", [
     Card("Síť", reduce_energy=1),
-    Card("Paralyzující jehly", damage=1, effect=Stun(1), effect_chance=0.8, effect_on_damage=True),
+    Card("Paralyzující jehly", damage=1, effect=Stun(
+        1), effect_chance=0.8, effect_on_damage=True),
     Card("Medvědí pasti", effect=Thorns(1, 2, 3), target_type="ally")
 ])
 
@@ -216,17 +307,17 @@ rabits_paw = Equipment("Králičí packa", "pocket", [
 ])
 
 madmans_eye = Equipment("Šílencovo oko", "pocket", [
-    Card("Šílené vize", damage=2, draw=2, target_type="self", cost=0)
+    Card("Šílené vize", self_damage=2, draw=2, target_type="self", cost=0)
 ])
 
 ritual_statue = Equipment("Rituální soška", "belt", [
-    Card("Šepot", draw=1, discard=1, combo=True, target_type="self", cost=0),
+    Card("Šepot", draw=1, discard=1, combo=1, target_type="self", cost=0),
     Card("Prozření", draw="combo", target_type="self")
 ])
 # ===== Prsteny =====
 
 ring_of_defense = Equipment("Prsten ochrany", "ring", [
-    Card("Bariera", block=4, target_type="self")
+    Card("Bariera", block=5, target_type="self")
 ])
 
 wurm_ring = Equipment("Prstenočerv", "ring", [
@@ -250,4 +341,43 @@ friendly_ant = Equipment("Mravenec", "companion", [
 crow = Equipment("Vrána", "companion", [
     Card("Klovnutí", damage=2, effect=Dodge(0.4, 1), cost=1),
     Card("Průzkum", draw=1, discard=1, cost=0)
+])
+
+# ===== Bossové =====
+# ------- Král Goblinů -------
+goblin_crown = Equipment("Goblinní koruna", "belt", [
+    Card("Goblinní stráž", spawn_enemy="Goblinní válečník",
+         spawn_count=1, target_type="self"),
+    Card("Všichi sem", spawn_enemy="Goblin",
+         spawn_count=2, target_type="self"),
+    Card("Pokřikování rozkazů", buff_strenght=1, target_type="all_enemies")
+])
+
+shiny_throne = Equipment("Lesklej trůn", "body", [
+    Card("Schování se za trůn", block=6, target_type="self"),
+    Card("Schování se za trůn", block=6, target_type="self"),
+])
+
+chiefs_cutter = Equipment("Šéfův kráječ", "hand", [
+    Card("Rozseknutí", damage=5),
+    Card("Rozseknutí", damage=5),
+    Card("Naporcovat", damage=8),
+])
+
+# ------- Temný šaman -------
+spirits_of_lost = Equipment("Duše zatracených", "belt", [
+    Card("Vyčerpání", increase_fatigue=2),
+    Card("Vyčerpání", increase_fatigue=2),
+    Card("Dotek strnutí", reduce_energy=1, increase_fatigue=1),
+])
+
+dark_mist = Equipment("Temná mlha", "belt", [
+    Card("Přivolání mlhy", effect=Dodge(0.5, 3), target_type="self"),
+    Card("Přízraky mlhy", damage=6, increase_fatigue=1)
+])
+
+twisted_staff = Equipment("Pokroucená hůl", "hand", [
+    Card("Sklizení duše", damage="fatigue"),
+    Card("Roj komárů", damage=4, lifesteal=1),
+    Card("Vyčkávání", block="fatigue")
 ])
