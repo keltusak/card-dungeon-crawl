@@ -1,37 +1,5 @@
 import random
 import os
-import textwrap
-import shutil
-import re
-
-ANSI_ESCAPE = re.compile(r'\033\[[0-9;]*m')
-
-UI_WIDTH = 100
-
-
-def render(lines):
-    for line in lines:
-        print_center_block(line)
-
-
-def print_center_block(text=""):
-    width = shutil.get_terminal_size().columns
-    lines = text.splitlines()
-
-    if not lines:
-        print()
-        return
-
-    max_len = max(visible_length(line) for line in lines)
-    padding = max((width - max_len) // 2, 0)
-
-    for line in lines:
-        print(" " * padding + line)
-
-
-def visible_length(text):
-    return len(ANSI_ESCAPE.sub('', text))
-
 
 def clear_screen():
     # Windows
@@ -41,33 +9,13 @@ def clear_screen():
     else:
         os.system("clear")
 
-
-def print_box(title, stats, description, width=60):
-    print_center_block("=" * width)
-    print_center_block(title.center(width))
-    print_center_block("=" * width)
-
-    for stat in stats:
-        print_center_block(stat.ljust(width))
-
-    print_center_block("-" * width)
-
-    wrapped_text = textwrap.wrap(description, width)
-    for line in wrapped_text:
-        print_center_block(line)
-
-    print_center_block("=" * width)
-
-
 class Colors:
     RED = "\033[91m"
     GREEN = "\033[92m"
     YELLOW = "\033[93m"
     BLUE = "\033[94m"
     GRAY = "\033[90m"
-    DARK_RED = "\033[31m"
     RESET = "\033[0m"
-
 
 class Ability:
     def __init__(self, name, description, ability_type, active=True, effect=None, trigger="passive", cards=None):
@@ -89,13 +37,12 @@ class Ability:
 
 
 class Card:
-    def __init__(self, name, damage=0, self_damage=0, block=0, energy=0, reduce_energy=0, effect=None, effect_chance=1.0,
-                 effect_on_damage=False, lifesteal=0, devour=0, target_type="enemy", spawn_enemy=None,
-                 spawn_count=0, draw=0, discard=0, buff_strenght=0, increase_fatigue=0, combo=0, scale=1, base=0, cost=1):
-
+    def __init__(self, name, damage=0, block=0, energy=0, reduce_energy=0, effect=None, effect_chance=1.0,
+                 effect_on_damage=False, lifesteal=0, devour = 0, target_type="enemy", spawn_enemy=None, 
+                 spawn_count=0, draw=0, discard=0, buff_strenght=0, combo=False, scale=1, cost=1):
+        
         self.name = name
         self.damage = damage
-        self.self_damage = self_damage
         self.block = block
         self.energy = energy
         self.reduce_energy = reduce_energy
@@ -110,11 +57,9 @@ class Card:
         self.spawn_enemy = spawn_enemy
         self.spawn_count = spawn_count
         self.buff_strenght = buff_strenght
-        self.increase_fatigue = increase_fatigue
 
         self.combo = combo
         self.scale = scale
-        self.base = base
 
         self.cost = cost
 
@@ -133,17 +78,11 @@ class Card:
 
         elif target_type == "any":
             return [player] + [e for e in enemies if e.hp > 0]
-
-    def get_damage(self, user, target):
+        
+    def get_damage(self, user):
         # klasický damage
         if isinstance(self.damage, int):
             return self.damage
-
-        if self.damage == "fatigue":
-            base = getattr(self, "base", 0)
-            scale = getattr(self, "scale", 1)
-            fatigue = getattr(target, "fatigue", 0)
-            return base + fatigue * scale
 
         if self.damage == "combo":
             base = getattr(self, "base", 0)
@@ -151,7 +90,7 @@ class Card:
             return base + user.combo_count * scale
 
         return 0
-
+    
     def get_draw(self, user):
         if isinstance(self.draw, int):
             return self.draw
@@ -161,35 +100,11 @@ class Card:
 
         return 0
 
-    def get_block(self, user, target):
-        if self.block == "fatigue":
-            base = getattr(self, "base", 0)
-            scale = getattr(self, "scale", 1)
-            fatigue = getattr(target, "fatigue", 0)
-            return base + fatigue * scale
-
-        if isinstance(self.block, int):
-            return self.block
-
-        return 0
-
-    def play(self, user, target, enemies_list=None, create_enemy_func=None, player=None, aoe=False):
-
-        lines = []
-
-        def msg(text):
-            lines.append(text)
-
-        msg(f"{user.name} používá {self.name}")
-
-        if player and not getattr(user, "is_player", False):
-            if user.name not in player.bestiary:
-                player.bestiary[user.name] = {
-                    "seen": True, "kills": 0, "seen_cards": set()}
-            player.bestiary[user.name]["seen_cards"].add(self.name)
+    def play(self, user, target, enemies_list=None, create_enemy_func=None):
+        print(f"{user.name} používá {self.name}")
 
         dmg_done = 0
-        base_damage = self.get_damage(user, target)
+        base_damage = self.get_damage(user)
 
         if base_damage > 0:
             user.attack_cards_played += 1
@@ -204,22 +119,18 @@ class Card:
                 if ability.type == "passive" and ability.trigger == "on_attack_played" and ability.active:
                     ability.effect(user)
 
-        if self.self_damage:
-            user.hp -= self.self_damage
-            msg(f"{Colors.RED}{user.name} si způsobil zranění za {self.self_damage} (HP: {user.hp}{Colors.RESET})")
-
         if self.spawn_enemy and enemies_list is not None and create_enemy_func is not None:
             for _ in range(self.spawn_count):
                 new_enemy = create_enemy_func(self.spawn_enemy)
                 enemies_list.append(new_enemy)
-            msg(f"{user.name} vyvolal nepřítele: {self.spawn_count} x {new_enemy.name}!")
+            print(
+                f"{user.name} vyvolal nepřítele: {self.spawn_count} x {new_enemy.name}!")
 
         if self.block:
-            block_value = self.get_block(user, target)
             if self.target_type == "ally":
-                target.add_block(block_value)
+                target.add_block(self.block)
             else:
-                user.add_block(block_value)
+                user.add_block(self.block)
 
         if self.combo:
             user.combo_count += self.combo
@@ -229,97 +140,85 @@ class Card:
 
         if self.reduce_energy:
             target.reduced_energy += self.reduce_energy
-            msg(f"{target.name} byl na nadcházející kolo připraven o {self.reduce_energy} energii/e")
-
-        if self.increase_fatigue:
-            target.fatigue += self.increase_fatigue
-            msg(f"{target.name} cítí únavu (aktuální únava: {target.fatigue})")
+            print(
+                f"{target.name} byl na nadcházející kolo připraven o {self.reduce_energy} energii/e")
 
         if self.buff_strenght:
-            if self.target_type == "all_enemies":
-                for e in enemies_list:
-                    if e != user and e.hp > 0:
-                        e.add_temporary_strenght(self.buff_strenght)
-            else:
-                user.add_temporary_strenght(self.buff_strenght)
+            user.add_temporary_strenght(self.buff_strenght)
 
         if self.lifesteal > 0 and dmg_done > 0:
             heal_amount = int(dmg_done * self.lifesteal)
             user.hp = min(user.max_hp, user.hp + heal_amount)
-            msg(f"{user.name} se léčí o {heal_amount} HP díky lifestealu (HP: {user.hp})")
-
-        if self.devour > 0:
+            print(
+                f"{user.name} se léčí o {heal_amount} HP díky lifestealu (HP: {user.hp})")
+            
+        if self.devour > 0: 
             for _ in range(self.devour):
                 if not target.discard:
                     break
-                removed_card = target.discard.pop(
-                    random.randint(0, len(target.discard)-1))
-                msg(f"Karta {removed_card.name} byla dočasně odstraněna z {target.name}ova odhazovacího balíčku")
+                removed_card = target.discard.pop(random.randint(0, len(target.discard)-1))
+                print(f"Karta {removed_card.name} byla dočasně odstraněna z {target.name}ova odhazovacího balíčku")
+
 
         draw_amount = self.get_draw(user)
         if draw_amount > 0:
-            msg(f"{user.name} dobral {draw_amount} kartu/karty díky {self.name}")
+            print(f"{user.name} dobral {draw_amount} kartu/karty díky {self.name}")
             user.draw(draw_amount)
 
-        if self.discard > 0 and not aoe:
-            if not user.hand:
-                msg("Nemáš žádné karty k zahození.")
-            else:
-                for _ in range(self.discard):
-                    if not user.hand:
-                        msg("Došly ti karty k zahození.")
-                        break
+        if self.discard > 0:
+            for _ in range(self.discard):
+                if not user.hand:
+                    break
 
-                    msg("\nAktuální ruka:")
-                    print_cards(user.hand)
+                print("\nAktuální ruka:")
+                print_cards(user.hand)  # <-- tady nahradíme výpis názvů
 
-                    while True:
-                        choice = input(
-                            f"Vyber kartu k zahození (0-{len(user.hand)-1}): ")
-                        if choice.isdigit():
-                            idx = int(choice)
-                            if 0 <= idx < len(user.hand):
-                                discarded = user.hand.pop(idx)
-                                user.discard.append(discarded)
-                                msg(f"Zahodil jsi kartu: {discarded.name}")
-                                break
+                while True:
+                    choice = input(
+                        f"Vyber kartu k zahození (0-{len(user.hand)-1}): ")
+                    if choice.isdigit():
+                        idx = int(choice)
+                        if 0 <= idx < len(user.hand):
+                            discarded = user.hand.pop(idx)
+                            user.discard.append(discarded)
+                            print(f"Zahodil jsi kartu: {discarded.name}")
+                            break
+                    print("Neplatná volba, zkus to znovu.")
 
         if self.effect:
             if getattr(self, "effect_on_damage", False) and dmg_done <= 0:
-                msg(f"{target.name} nebyl zasažen, efekt {self.effect.name} se neuplatní.")
+                print(
+                    f"{target.name} nebyl zasažen, efekt {self.effect.name} se neuplatní.")
             else:
                 if random.random() <= self.effect_chance:
                     copied_effect = self.effect.copy()
 
                     if self.target_type == "self":
                         user.status_effects.append(copied_effect)
-                        msg(f"{user.name} získal efekt: {copied_effect.name}")
+                        print(f"{user.name} získal efekt: {copied_effect.name}")
                     else:
                         target.status_effects.append(copied_effect)
-                        msg(f"{target.name} získal efekt: {copied_effect.name}")
+                        print(f"{target.name} získal efekt: {copied_effect.name}")
 
                     if isinstance(copied_effect, Stun):
                         copied_effect.apply(
                             target if self.target_type != "self" else user)
                 else:
-                    msg(f"{self.effect.name} se nepodařilo aplikovat ({int(self.effect_chance*100)}% šance)")
-
-        render(lines)
-
+                    print(
+                        f"{self.effect.name} se nepodařilo aplikovat ({int(self.effect_chance*100)}% šance)")
 
 def shuffle_deck(deck, shuffler):
     random.shuffle(deck)
     # aplikuj fatigue pouze pokud je shuffler opravdu hráč
     if hasattr(shuffler, "is_player") and shuffler.is_player:
         if hasattr(shuffler, "fatigue") and shuffler.fatigue > 0:
-            print_center_block(
+            print(
                 f"{Colors.RED}{shuffler.name} cítí únavu a ztrácí {shuffler.fatigue} HP!{Colors.RESET}"
             )
             input("ENTER pro pokračování...")
             shuffler.hp -= shuffler.fatigue
 
         shuffler.fatigue += 1
-
 
 def format_status_effects(character):
     if not character.status_effects:
@@ -330,7 +229,6 @@ def format_status_effects(character):
         effects.append(f"{effect.name}({effect.duration})")
 
     return " | " + ", ".join(effects)
-
 
 class Status_Effect:
     def __init__(self, name, duration):
@@ -366,7 +264,7 @@ class Poison(Status_Effect):
             ignore_armor=True,
             suppress_print=True  # tisk jen zde
         )
-        print_center_block(
+        print(
             f"{Colors.RED}{target.name} trpí otravou a obdržel {dmg_done} dmg (block ignorován) - (HP: {target.hp}{Colors.RESET}).")
         input("ENTER pro pokračování...")
 
@@ -384,7 +282,6 @@ class Stun(Status_Effect):
     def copy(self):
         return Stun(self.duration)
 
-
 class Thorns(Status_Effect):
     def __init__(self, chance, damage, duration=1):
         super().__init__("Trny", duration)
@@ -396,7 +293,6 @@ class Thorns(Status_Effect):
 
     def copy(self):
         return Thorns(self.chance, self.damage, self.duration)
-
 
 class Dodge(Status_Effect):
     def __init__(self, chance, duration=1):
@@ -419,21 +315,13 @@ class Equipment:
 
 
 def print_cards(cards):
-
-    def render(lines):
-        print_center_block("\n".join(lines))
-
     if not cards:
-        render(["Žádné karty."])
+        print("Žádné karty.")
         return
 
-    lines = [""]
-
     for i, card in enumerate(cards):
-
         parts = []
 
-        # ===== DAMAGE =====
         if card.damage:
             if isinstance(card.damage, int):
                 dmg_str = str(card.damage)
@@ -442,7 +330,7 @@ def print_cards(cards):
                 scale = getattr(card, "scale", 1)
 
                 if base == 0 and scale == 1:
-                    dmg_str = f"{card.damage}"
+                    dmg_str = f"{card.damage}"  # jen typ, např. "combo"
                 elif base == 0:
                     dmg_str = f"combo*{scale}"
                 elif scale == 0:
@@ -451,49 +339,34 @@ def print_cards(cards):
                     dmg_str = f"{base} + combo*{scale}"
 
             parts.append(f"DMG:{dmg_str}")
-
-        # ===== OTHER STATS =====
-        if card.self_damage:
-            parts.append(f"SELF DMG:{card.self_damage}")
-
+            
         if card.block:
             parts.append(f"BLOCK:{card.block}")
-
         if card.lifesteal:
             parts.append(f"LIFESTEAL:{card.lifesteal}")
-
         if card.energy:
             parts.append(f"ENERGY:+{card.energy}")
-
         if card.buff_strenght:
-            parts.append(f"BUFF STRENGTH:{card.buff_strenght}")
-
+            parts.append(f"BUFF STRENGHT:{card.buff_strenght}")
         if card.effect:
             chance = getattr(card, "effect_chance", 1.0)
             effect_desc = card.effect.description()
             parts.append(
-                f"EFFECT:{card.effect.name} ({int(chance*100)}%) - {effect_desc}"
-            )
-
+                f"EFFECT:{card.effect.name} ({int(chance*100)}%) - {effect_desc}")
         if getattr(card, "draw", 0):
             parts.append(f"DRAW:{card.draw}")
-
         if getattr(card, "discard", 0):
             parts.append(f"DISCARD:{card.discard}")
-
         if getattr(card, "target_type", None) == "all_enemies":
             parts.append("AOE")
-
         if card.combo:
-            parts.append(f"COMBO:{card.combo}")
-
+            parts.append(f"COMBO")
+        # cenu vypisovat jako poslední a u všech karet
         parts.append(f"COST:{card.cost}")
 
         stats = ", ".join(parts)
+        print(f"{i}: {card.name} ({stats})")
 
-        lines.append(f"{i}: {card.name} ({stats})")
-
-    render(lines)
 
 
 SYNERGIES = [
@@ -506,8 +379,7 @@ SYNERGIES = [
     {
         "requires": ["Řemdich", "Štít"],
         "cards": [
-            Card("Rozmáchnutí zpoza krytu", damage=2,
-                 block=1, target_type="all_enemies")
+            Card("Rozmáchnutí zpoza krytu", damage=2, block=1, target_type="all_enemies")
         ]
     },
     {

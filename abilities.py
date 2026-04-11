@@ -1,15 +1,5 @@
 from core import Ability, Card
 
-pain_for_all = Ability(
-    name="Bolest pro všechny",
-    description="Odemyká kartu:",
-    ability_type="card",
-    cards=[
-        Card("Bolest pro všechny", damage=6,
-             self_damage=3, target_type="all_enemies")
-    ]
-)
-
 power_strike = Ability(
     name="Silný útok",
     description="Odemyká kartu:",
