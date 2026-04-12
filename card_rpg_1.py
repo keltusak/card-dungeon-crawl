@@ -337,7 +337,7 @@ class GameMap:
                             self.grid[cy][cx] = "#"  # vrátíme zpět
                     break
 
-    def generate_bonefire_positions(self, player_x, player_y, existing_fires=None, min_distance=3, max_attempts=100):
+    def generate_bonefire_positions(self, player_x, player_y, existing_fires=None, min_distance=3):
         if existing_fires is None:
             existing_fires = []
 
@@ -345,43 +345,57 @@ class GameMap:
 
         for y in range(1, self.height - 1):
             for x in range(1, self.width - 1):
-                # Musí být volné a ne tam, kde je hráč
+
+                # musí být volné a ne hráč
                 if self.grid[y][x] != "." or (x, y) == (player_x, player_y):
                     continue
 
-                # Kontrola vzdálenosti od ostatních ohnišť
+                # distance check
                 if any(abs(x - fx) + abs(y - fy) < min_distance for fx, fy in existing_fires):
                     continue
 
-                # Kontrola 3x3 volných míst
-                free_count = sum(
-                    1
+                # 8 okolí
+                neighbors_8 = [
+                    (x + dx, y + dy)
                     for dy in (-1, 0, 1)
                     for dx in (-1, 0, 1)
-                    if self.grid[y + dy][x + dx] == "."
+                    if not (dx == 0 and dy == 0)
+                ]
+
+                free_8 = sum(
+                    1 for nx, ny in neighbors_8
+                    if self.grid[ny][nx] == "."
                 )
-                if free_count >= 5:
+
+                # diagonály (rohy)
+                diagonals = [
+                    (x-1, y-1),
+                    (x+1, y-1),
+                    (x-1, y+1),
+                    (x+1, y+1)
+                ]
+
+                free_diag = sum(
+                    1 for nx, ny in diagonals
+                    if self.grid[ny][nx] == "."
+                )
+
+                # ✔ STRICT RULES (žádné mezistavy)
+                if free_8 == 8:
                     candidates.append((x, y))
-                else:
-                    # případně slepá ulička: jen jedna cesta ven
-                    neighbors = [
-                        (x + dx, y + dy)
-                        for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]
-                        if 0 <= x + dx < self.width and 0 <= y + dy < self.height
-                    ]
-                    paths = sum(
-                        1 for nx, ny in neighbors if self.grid[ny][nx] == ".")
-                    if paths == 1:
-                        candidates.append((x, y))
+
+                elif free_diag >= 3:
+                    candidates.append((x, y))
 
         if not candidates:
-            # fallback
-            return [(random.randint(0, self.width - 1), random.randint(0, self.height - 1))]
+            return [(random.randint(0, self.width - 1),
+                    random.randint(0, self.height - 1))]
 
         chosen = random.choice(candidates)
-        existing_fires.append(chosen)  # zaznamenáme nově vybrané ohniště
-        return [chosen]
+        existing_fires.append(chosen)
 
+        return [chosen]
+    
     def generate_chest_positions(self, player_x, player_y, chest_count=1, min_distance_from_doors=2):
         candidates = []
 
@@ -450,9 +464,19 @@ class GameMap:
         for x, y in self.generate_chest_positions(player_x, player_y, chest_count=chest_count):
             self.place_chest(x, y)
             chest_positions.append((x, y))
+        # -------------------------------
+        # 3) Stráže u dveří a truhel
+        # -------------------------------
+        for x, y in door_positions:
+            if boss_door and (x, y) == boss_door:
+                continue  # boss dveře nemají normální stráže
+            self.place_door_guards(x, y)
+
+        for x, y in chest_positions:
+            self.place_chest_guard(x, y)
 
         # -------------------------------
-        # 3) Ohniště
+        # 4) Ohniště
         # -------------------------------
         for _ in range(bonefire_count):
             for x, y in self.generate_bonefire_positions(
@@ -463,16 +487,6 @@ class GameMap:
                 self.place_bonefire(x, y)
                 existing_fires.append((x, y))
 
-        # -------------------------------
-        # 4) Stráže u dveří a truhel
-        # -------------------------------
-        for x, y in door_positions:
-            if boss_door and (x, y) == boss_door:
-                continue  # boss dveře nemají normální stráže
-            self.place_door_guards(x, y)
-
-        for x, y in chest_positions:
-            self.place_chest_guard(x, y)
 
     def generate_enemies(self, count, player_x, player_y):
         for _ in range(count):
@@ -1875,7 +1889,7 @@ while player.hp > 0:
 
     GameMap.update_visibility(game_map, player_x, player_y)
     GameMap.draw_map(game_map, player_x, player_y)
-    # game_map.print_full_map()  # pouze při testování generování map
+    #game_map.print_full_map()  # pouze při testování generování map
 
     core.print_center_block(
         f"\nHP: {player.hp}/{player.max_hp}, XP: {player.xp}, LVL: {player.lvl}, Dungeon lvl: {player.dungeon_level}")

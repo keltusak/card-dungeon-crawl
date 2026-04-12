@@ -323,11 +323,11 @@ class Card:
 
                     #input taky centrovaný
                     choice = input(
-                        f"Vyber kartu k zahození (0-{len(user.hand)-1}): "
+                        f"Vyber kartu k zahození (1-{len(user.hand)}): "
                     )
 
                     if choice.isdigit():
-                        idx = int(choice)
+                        idx = int(choice) - 1
                         if 0 <= idx < len(user.hand):
                             discarded = user.hand.pop(idx)
                             user.discard.append(discarded)

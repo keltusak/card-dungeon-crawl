@@ -100,7 +100,7 @@ blade_of_blood_frenzy = Equipment("Čepel krvavého šílenství", "hand", [
 forbidden_texts = Equipment("Zakázané texty", "hand", [
     Card("Zakázaná slova", draw=2, combo=1),
     Card("Šepot", draw=1, discard=1, combo=1, target_type="self", cost=0),
-    Card("Ztráta rozumu", self_damage=2, draw=3, combo=2),
+    Card("Ztráta rozumu", self_damage=2, draw=3, combo=2, target_type="self"),
     Card("Kolaps mysli", damage="combo", scale=2)
 ])
 
