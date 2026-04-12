@@ -39,6 +39,42 @@ class Character:
         self.hand = []
         self.discard = []
 
+    def serialize_bestiary(self, bestiary):
+        return {
+            name: {
+                "seen": data["seen"],
+                "kills": data["kills"],
+                "seen_cards": list(data.get("seen_cards", [])),
+                "info": data.get("info", {}),
+                "all_cards": data.get("all_cards", [])
+            }
+            for name, data in bestiary.items()
+        }
+
+    def to_dict(self):
+        return {
+            "name": self.name,
+
+            "hp": self.hp,
+            "max_hp": self.max_hp,
+
+            "max_energy": self.max_energy,
+            "extra_draw": self.extra_draw,
+            "strenght": self.strenght,
+
+            "player_class": getattr(self, "player_class", None),
+
+            "xp": getattr(self, "xp", 0),
+            "lvl": getattr(self, "lvl", 1),
+            "dungeon_level": getattr(self, "dungeon_level", 1),
+
+            "inventory": [item.name for item in self.inventory],
+            "equipment": {slot: [item.name if item else None for item in items] for slot, items in self.slots.items()},
+            "abilities": [a.name for a in self.abilities],
+
+            "bestiary": self.serialize_bestiary(self.bestiary)
+        }
+
     def build_deck(self):
         self.deck = []
 
@@ -79,14 +115,21 @@ class Character:
         return False
 
     def draw(self, n=3):
+        messages = []
+
         for _ in range(n):
             if not self.deck:
                 self.deck = self.discard
                 self.discard = []
-                shuffle_deck(self.deck, shuffler=self)
+                self.discard.clear()
+
+                msgs = shuffle_deck(self.deck, shuffler=self)
+                messages.extend(msgs)
 
             if self.deck:
                 self.hand.append(self.deck.pop())
+
+        return messages
 
     def discard_hand(self):
         self.discard.extend(self.hand)
@@ -307,7 +350,6 @@ class Character:
             lines.append(
                 f"Deck: {len(player.deck)}, Discard: {len(player.discard)}")
             lines.append("")
-            lines.append("(ENTER = ukončit tah)")
 
             # ===== RENDER =====
             lines.append("")
@@ -316,7 +358,7 @@ class Character:
 
             render(lines)
 
-            choice = input("Vyber kartu: ")
+            choice = input("ENTER = ukončit tah, Vyber kartu: ")
 
             if choice == "":
                 break
@@ -326,7 +368,7 @@ class Character:
                 input("ENTER...")
                 continue
 
-            index = int(choice)
+            index = int(choice) - 1 #kvůli výpisu pro uživatele, který začíná od 1
 
             if index < 0 or index >= len(player.hand):
                 render(["Neplatná karta"])
@@ -422,7 +464,7 @@ def choose_enemy(enemies, render, padding):
         return alive[0]
 
     lines = ["Vyber nepřítele:"]
-    for i, e in enumerate(alive):
+    for i, e in enumerate(alive, 1):
         lines.append(f"{i}: {e.name} (HP: {e.hp})")
 
     core.print_center_block("\n".join(lines), padding)
@@ -431,7 +473,7 @@ def choose_enemy(enemies, render, padding):
         choice = input("Vyber nepřítele: ")
 
         if choice.isdigit():
-            idx = int(choice)
+            idx = int(choice) - 1
             if 0 <= idx < len(alive):
                 return alive[idx]
 

@@ -356,20 +356,21 @@ class Card:
 
         render(lines, use_existing_padding=True)
 
-
 def shuffle_deck(deck, shuffler):
     random.shuffle(deck)
-    # aplikuj fatigue pouze pokud je shuffler opravdu hráč
+
+    messages = []
+
     if hasattr(shuffler, "is_player") and shuffler.is_player:
         if hasattr(shuffler, "fatigue") and shuffler.fatigue > 0:
-            print_center_block(
+            messages.append(
                 f"{Colors.RED}{shuffler.name} cítí únavu a ztrácí {shuffler.fatigue} HP!{Colors.RESET}"
             )
-            input("ENTER pro pokračování...")
             shuffler.hp -= shuffler.fatigue
 
         shuffler.fatigue += 1
 
+    return messages
 
 def format_status_effects(character):
     if not character.status_effects:
@@ -486,7 +487,7 @@ def get_card_lines(cards):
 
     lines = [""]
 
-    for i, card in enumerate(cards):
+    for i, card in enumerate(cards, 1):
 
         parts = []
 

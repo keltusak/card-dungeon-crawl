@@ -5,6 +5,7 @@ import os
 from collections import deque
 import textwrap
 import shutil
+import json
 
 # ostatní soubory
 import core
@@ -12,6 +13,160 @@ import gear
 import abilities
 import character
 import monsters
+
+
+
+# ===== PRÁCE SE SOUBORY (SAVY)=====
+ABILITY_DATABASE = {
+    abilities.pain_for_all.name: abilities.pain_for_all,
+    abilities.power_strike.name: abilities.power_strike,
+    abilities.fast_strike.name: abilities.fast_strike,
+    abilities.defensive_strike.name: abilities.defensive_strike,
+    abilities.no_rest.name: abilities.no_rest,
+    abilities.muscles.name: abilities.muscles,
+    abilities.hard_root.name: abilities.hard_root,
+    abilities.three_attack_draw.name: abilities.three_attack_draw,
+    abilities.maintaining_defense.name: abilities.maintaining_defense,
+}
+
+ITEM_DATABASE = {
+    gear.test_kill.name: gear.test_kill,
+    # ===== ZÁKLADNÍ ZBRANĚ =====
+    gear.dagger.name: gear.dagger,
+    gear.sword.name: gear.sword,
+    gear.broken_sword.name: gear.broken_sword,
+    gear.flail.name: gear.flail,
+    gear.battle_axe.name: gear.battle_axe,
+    gear.mace.name: gear.mace,
+    gear.poison_dagger.name: gear.poison_dagger,
+
+    # ===== KULTISTKA =====
+    gear.cultistic_blade.name: gear.cultistic_blade,
+    gear.bloodthirsty_tongue.name: gear.bloodthirsty_tongue,
+    gear.claw_dagger.name: gear.claw_dagger,
+    gear.sacrificial_blade.name: gear.sacrificial_blade,
+    gear.blade_of_blood_frenzy.name: gear.blade_of_blood_frenzy,
+    gear.forbidden_texts.name: gear.forbidden_texts,
+    gear.ritual_sickle.name: gear.ritual_sickle,
+    gear.serpent_spear.name: gear.serpent_spear,
+
+    # ===== PODPORA / POMOCNÉ =====
+    gear.blood_vial.name: gear.blood_vial,
+    gear.sacrificial_bone.name: gear.sacrificial_bone,
+
+    # ===== MÁG =====
+    gear.wooden_staff.name: gear.wooden_staff,
+    gear.an_untitled_book.name: gear.an_untitled_book,
+
+    # ===== ŠTÍTY =====
+    gear.shield.name: gear.shield,
+    gear.shield_with_spike.name: gear.shield_with_spike,
+    gear.shield_e.name: gear.shield_e,
+
+    # ===== ZBROJE =====
+    gear.padded_armor.name: gear.padded_armor,
+    gear.ritual_skirt.name: gear.ritual_skirt,
+    gear.old_robe.name: gear.old_robe,
+    gear.hide.name: gear.hide,
+    gear.newborns_exoskelet.name: gear.newborns_exoskelet,
+    gear.exoskelet.name: gear.exoskelet,
+    gear.bark.name: gear.bark,
+
+    # ===== PASTI / TRIKY =====
+    gear.set_of_traps.name: gear.set_of_traps,
+    gear.caltrops.name: gear.caltrops,
+
+    # ===== POMOCNÉ ITEMY =====
+    gear.war_paints.name: gear.war_paints,
+    gear.abakus.name: gear.abakus,
+    gear.battle_plans.name: gear.battle_plans,
+    gear.rabits_paw.name: gear.rabits_paw,
+    gear.madmans_eye.name: gear.madmans_eye,
+    gear.ritual_statue.name: gear.ritual_statue,
+
+    # ===== PRSTENY =====
+    gear.ring_of_defense.name: gear.ring_of_defense,
+    gear.wurm_ring.name: gear.wurm_ring,
+    gear.poisoners_ring.name: gear.poisoners_ring,
+    gear.ring_with_needle.name: gear.ring_with_needle,
+
+    # ===== COMPANIONS =====
+    gear.friendly_ant.name: gear.friendly_ant,
+    gear.crow.name: gear.crow,
+}
+
+def deserialize_bestiary(data):
+    return {
+        name: {
+            "seen": entry["seen"],
+            "kills": entry["kills"],
+            "seen_cards": set(entry.get("seen_cards", [])),
+            "info": entry.get("info", {}),
+            "all_cards": entry.get("all_cards", [])
+        }
+        for name, entry in data.items()
+    }
+
+def save_game(player):
+    data = {
+        "player": player.to_dict()
+    }
+
+    with open("save.json", "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=4, ensure_ascii=False)
+
+def load_game(path="save.json"):
+    with open(path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    p = data["player"]
+
+    # ===== CREATE PLAYER =====
+    player = character.Character(p["name"], p["max_hp"])
+
+    # ===== BASIC STATS =====
+    player.hp = p["hp"]
+    player.max_hp = p["max_hp"]
+    player.max_energy = p["max_energy"]
+    player.extra_draw = p["extra_draw"]
+
+    player.energy = player.max_energy
+    player.strenght = p.get("strenght", 0)
+
+    player.player_class = p.get("player_class")
+    player.xp = p.get("xp", 0)
+    player.lvl = p.get("lvl", 1)
+    player.dungeon_level = p.get("dungeon_level", 1)
+
+    # ===== INVENTORY =====
+    player.inventory = [
+        ITEM_DATABASE[name] for name in p.get("inventory", [])
+        if name in ITEM_DATABASE
+    ]
+
+    # ===== EQUIPMENT (slots) =====
+    player.slots = {}
+
+    for slot, items in p.get("equipment", {}).items():
+        player.slots[slot] = [
+            ITEM_DATABASE[name] if name else None
+            for name in items
+        ]
+
+    # ===== BESTIARY =====
+    player.bestiary = p.get("bestiary", {})
+
+    # ===== OPTIONAL FIELDS =====
+    player.abilities = [
+        ABILITY_DATABASE[name]
+        for name in data["player"].get("abilities", [])
+        if name in ABILITY_DATABASE
+    ] # zatím jednoduché
+
+    return player
+
+#============================================================
+
 
 
 def render_block(title, lines):
@@ -559,6 +714,7 @@ class GameMap:
         core.print_center_block(map_text)
 
     def next_level(player):
+        save_game(player)
         global game_map, player_x, player_y
 
         player.dungeon_level += 1
@@ -577,7 +733,7 @@ class GameMap:
                 chest_count=1,
                 player_x=player_x,
                 player_y=player_y,
-                door_count=0,  # žádné běžné dveře
+                door_count=0,
                 boss_room=boss_room
             )
             game_map.generate_enemies_in_corridors(
@@ -879,7 +1035,7 @@ def show_enemy_detail(player, enemy_name):
 def show_inventory(player):
 
     padding = None
-    
+
     def render(lines, use_existing_padding=False):
         nonlocal padding
         if use_existing_padding and padding is not None:
@@ -1067,6 +1223,9 @@ def show_inventory(player):
                         ability, "active", True) else "Neaktivní"
                     lines.append(
                         f"{i}: {ability.name} ({status}) - {ability.description}")
+                    if getattr(ability, "type", None) == "card":
+                        for card_line in core.get_card_lines(ability.cards):
+                            lines.append("   " + card_line)
 
                 lines.append("")
                 lines.append("1: Přepnout aktivitu schopnosti")
@@ -1131,19 +1290,36 @@ def level_up(self):
 
     while True:
         clear_screen()
-        core.print_center_block(
-            "\n\033[94m=== DOSÁHL JSI NOVÉ ÚROVNĚ! ===\033[0m")
-        core.print_center_block(
-            "Tvé dosavadní maximalní zdraví se zvýšílo o 5.\n")
-        core.print_center_block("Vyber si jednu schopnost:\n")
+
+        # ======================
+        # UI BUILD (LINES)
+        # ======================
+        lines = []
+
+        lines.append("\033[94m=== DOSÁHL JSI NOVÉ ÚROVNĚ! ===\033[0m")
+        lines.append("")
+        lines.append("Tvé maximální zdraví se zvýšilo o 5.")
+        lines.append("")
+        lines.append("Vyber si jednu schopnost:")
+        lines.append("")
 
         for i, ability in enumerate(choices, 1):
-            core.print_center_block(
-                f"\033[96m{i}) {ability.name} - {ability.description}\033[0m")
-            if getattr(ability, "type", None) == "card":
-                core.print_cards(ability.cards)
-            core.print_center_block()
+            lines.append(f"\033[96m{i}) {ability.name} - {ability.description}\033[0m")
 
+            if getattr(ability, "type", None) == "card":
+                for card_line in core.get_card_lines(ability.cards):
+                    lines.append("   " + card_line)
+
+            lines.append("")
+
+        # ======================
+        # RENDER
+        # ======================
+        core.render_block(lines, forced_padding=None)
+
+        # ======================
+        # INPUT
+        # ======================
         choice = input("\nTvoje volba: ")
 
         if choice.isdigit():
@@ -1151,10 +1327,10 @@ def level_up(self):
             if 1 <= choice <= len(choices):
                 selected = choices[choice - 1]
                 selected.apply(self)
+
                 core.print_center_block(f"\nZískal jsi: {selected.name}")
                 input("Pokračuj...")
                 break
-
 
 def get_valid_index(prompt, max_value):
     while True:
@@ -1293,9 +1469,10 @@ def combat(player, enemies):
         # =======================
         # START KOLA UI
         # =======================
-        core.print_center_block(
-            "--- Nové kolo ---",)
         lines = []
+
+        core.print_center_block("--- Nové kolo ---")
+        core.print_center_block("\n")
 
         player.block = 0
         player.combo_count = 0
@@ -1360,11 +1537,28 @@ def combat(player, enemies):
             return False
 
         if first_turn:
-            player.draw(3)
+            msgs = player.draw(3)
+
+            if msgs:
+                render(msgs, use_existing_padding=True)
+                input("ENTER...")
+
+            result = check_combat_end(player, enemies, render)
+            if result is not None:
+                return result
+            
             render([f"Narazil jsi na {len(enemies)} nepřátel"], use_existing_padding=True)
             first_turn = False
         else:
-            player.draw(2 + player.extra_draw)
+            msgs= player.draw(2 + player.extra_draw)
+
+            if msgs:
+                render(msgs, use_existing_padding=True)
+                input("ENTER...")
+            
+            result = check_combat_end(player, enemies, render)
+            if result is not None:
+                return result
 
         character.Character.player_turn(player, enemies)
 
@@ -1380,7 +1574,8 @@ def combat(player, enemies):
         # =======================
         clear_screen()
         core.print_center_block(
-            f"{core.Colors.RED}--- Nepřátelský tah ---{core.Colors.RESET}",)
+            f"{core.Colors.RED}--- Nepřátelský tah ---{core.Colors.RESET}")
+        core.print_center_block("\n")
 
         # ===== ENEMY STATUS =====
         lines = [
@@ -1414,7 +1609,6 @@ def combat(player, enemies):
 
         render([""], use_existing_padding=True)
         render(["--- Nepřátelé hrají ---"], use_existing_padding=True)
-        render([""], use_existing_padding=True)
 
         for enemy in enemies:
             enemy.block = 0
@@ -1488,11 +1682,17 @@ def check_combat_end(player, enemies, render):
         if boss.hp <= 0:
             render(["Porazil jsi bosse!"], use_existing_padding=True)
             input("ENTER...")
+            for enemy in enemies:
+                        if enemy.name in player.bestiary and enemy.hp <= 0:
+                            player.bestiary[enemy.name]["kills"] += 1
             return True
     else:
         if all(e.hp <= 0 for e in enemies):
             render(["Vyhrál jsi!"], use_existing_padding=True)
             input("ENTER...")
+            for enemy in enemies:
+                        if enemy.name in player.bestiary and enemy.hp <= 0:
+                            player.bestiary[enemy.name]["kills"] += 1
             return True
 
     return None
@@ -1538,7 +1738,6 @@ def select_starting_build(player):
                 player.equip_item(gear.sword)
                 player.equip_item(gear.shield)
                 player.equip_item(gear.padded_armor)
-                player.equip_item(gear.caltrops)
                 # player.equip_item(gear.battle_axe)
                 # player.equip_item(gear.war_paints)
                 # player.equip_item(gear.ring_of_defense)
@@ -1606,7 +1805,7 @@ def select_starting_build(player):
                 player.equip_item(gear.an_untitled_book)
                 player.equip_item(gear.old_robe)
                 player.player_class = "mag"
-                # player.equip_item(gear.test_kill)
+                #player.equip_item(gear.test_kill)
 
                 return
 
@@ -1616,23 +1815,47 @@ def select_starting_build(player):
 
 # ===== MAIN LOOP ========
 DEBUG_BOSS_FIGHT = False
+
 clear_screen()
-player = character.Character("Hráč", 20)
-select_starting_build(player)
-player.is_player = True
-player.abilities = []
-player.dungeon_level = 1
+core.print_center_block("=== DUNGEON CRAWLER ===")
+core.print_center_block("")
+core.print_center_block("1) Nová hra")
+core.print_center_block("2) Načíst hru")
+core.print_center_block("")
+
+choice = input("> ")
+
+if choice == "2":
+    player = load_game("save.json")
+
+    if player is None:
+        core.print_center_block("Save nenalezen, startuji novou hru...")
+        input("ENTER...")
+        player = character.Character("Hráč", 20)
+        select_starting_build(player)
+        player.is_player = True
+        player.abilities = []
+        player.dungeon_level = 1
+        player.xp = 0
+        player.lvl = 1
+    else:
+        core.print_center_block("Hra načtena!")
+        input("ENTER...")
+
+else:
+    player = character.Character("Hráč", 20)
+    select_starting_build(player)
+    player.is_player = True
+    player.abilities = []
+    player.dungeon_level = 0
+    player.xp = 0
+    player.lvl = 1
+
 player.fatigue = 0
 player.reduced_energy = 0
 player.combo_count = 0
-player.xp = 0
-player.lvl = 1
 
-game_map = GameMap(24, 20)
-rooms = game_map.generate_dungeon()
-player_x, player_y = rooms[0].center()
-game_map.generate_objects(2, random.randint(1, 3), player_x, player_y,)
-game_map.generate_enemies_in_corridors(2, player_x, player_y)
+GameMap.next_level(player)
 
 # ===== DEBUG BOSS FIGHT =====
 if DEBUG_BOSS_FIGHT:
